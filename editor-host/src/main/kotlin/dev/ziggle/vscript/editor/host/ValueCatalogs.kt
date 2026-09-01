@@ -15,12 +15,25 @@ import dev.ziggle.vscript.model.TypeRef
  */
 interface IconRef
 
-/** Resolves an [IconRef] to a GL texture id, or null when there is no picture for it. */
-/** A rectangle of a texture in normalised UV — one cell of an atlas, or the whole picture by default. */
-class IconRegion(val texture: Int, val u0: Float = 0f, val v0: Float = 0f, val u1: Float = 1f, val v1: Float = 1f)
+/**
+ * A rectangle of a texture in normalised UV — one cell of an atlas, or the whole picture by default.
+ *
+ * [texture] is a `Long` and not an `Int`, and that is the whole of what the type has to say.
+ *
+ * It began as an OpenGL texture name, which is a 32-bit integer, and the host that draws these happens to
+ * be Minecraft. From Minecraft 1.21.6 the game no longer hands out GL names: its Blaze3D layer owns
+ * texture handles behind an abstraction, they are 64-bit, and on a Vulkan backend there is no GL name to
+ * be had at all. A host that could only answer with an `Int` would be stuck on an old renderer for
+ * reasons that have nothing to do with this editor.
+ *
+ * ImGui's draw list has always taken a `Long` here, so widening costs nothing on either side: the
+ * conversions that used to sit at the two `addImage` call sites are simply gone.
+ */
+class IconRegion(val texture: Long, val u0: Float = 0f, val v0: Float = 0f, val u1: Float = 1f, val v1: Float = 1f)
 
+/** Resolves an [IconRef] to a texture handle, or null when there is no picture for it. */
 fun interface IconSource {
-    fun texture(ref: IconRef): Int?
+    fun texture(ref: IconRef): Long?
 
     /** The icon as a region of a texture; the default is the whole of [texture]. Atlases override this. */
     fun region(ref: IconRef): IconRegion? = texture(ref)?.let { IconRegion(it) }
