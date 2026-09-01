@@ -1,0 +1,77 @@
+/*
+ * The ImGui widget kit — theme, draw kit, fonts, fuzzy search, panel scaffolding.
+ *
+ * ### Widgets only, never an editing model
+ *
+ * That line from the split plan is the whole boundary and it is worth stating where the code is. A thing
+ * belongs here if it draws or measures; it does not belong here if it knows what is being edited. `Theme`
+ * and `DrawKit` are widgets. A pin's colour, a type's editor and a catalogue's entries are not — they are
+ * the editor's model of a document, and they live with the surface that edits one.
+ *
+ * ### Why it depends on nothing of ours
+ *
+ * Not an accident and not a nice-to-have: this module has no dependency on `:vscript-lang` at all, so
+ * "the widget kit knows nothing about the language" is enforced by the build rather than promised in a
+ * comment. It came out of `vscript-client` where the same 13 files were reachable from everything, and the
+ * measured foreign surface was exactly two things — ImGui and commonmark. That is what made it the first
+ * module to move.
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    // **compileOnly, exactly as the client had it.** ImGui's binding needs natives and a live GL context;
+    // whoever opens a window supplies both. A module that only draws into a draw list must not drag a
+    // native loader onto a consumer's runtime classpath — the client already supplies its own, and a
+    // second copy is how two ImGui contexts end up in one process.
+    compileOnly 'io.github.spair:imgui-java-binding:1.90.0'
+
+    // Markdown.kt renders node documentation into the palette and the tooltips. An `api` dependency
+    // rather than `implementation`: the parser's node types appear on `Markdown`'s own signatures, so a
+    // consumer that calls it needs them on its compile classpath too.
+    api 'org.commonmark:commonmark:0.22.0'
+
+    // The kit owns real logic now -- `TextEdit` is a caret, a selection and a wrap algorithm -- so it
+    // owns tests. `imgui-java-binding` is `compileOnly` above and the tests need it at RUN time: the
+    // editing primitives never touch ImGui, but they are declared in a file that does.
+    testImplementation 'io.github.spair:imgui-java-binding:1.90.0'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+base {
+    archivesName = 'vscript-ui'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'vscript-ui'
+            pom {
+                name = 'vscript-ui'
+                description = 'ImGui widget kit: theme, draw helpers, fonts, fuzzy search, panel scaffolding.'
+            }
+        }
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}

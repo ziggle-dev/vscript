@@ -1,0 +1,59 @@
+/*
+ * The seam an EMBEDDER implements to host an editor.
+ *
+ * ### Why it is its own module
+ *
+ * `EditorHost`, `TypeStyles`, `ValueCatalogs` and `TypedText` are what an editor asks its host for: how a
+ * type looks and what widget it gets, what values the host can search, where typed characters come from,
+ * where a run reports to. Both authoring surfaces need it and neither owns it, so it cannot live in
+ * either — that is the same argument `:vscript-runview` makes, one layer up.
+ *
+ * It is not the widget kit either, and the distinction is the one `:vscript-ui` states: a thing belongs
+ * there if it draws or measures, and here if it knows what is being EDITED. `Theme.col` is a widget;
+ * "which editor does a `Tile` pin get, and what does a colour look like written down" is an editing model.
+ *
+ * 370 lines that depend on the language's `model` and one object from the kit. §1 of the split plan does
+ * not list it because it did not exist when that was written — it was carved out of the client during
+ * phase 1, which is what made the surfaces movable at all.
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    // Both `api`: a `TypeStyle` is declared in terms of the language's `TypeRef`, and `TypedText` in terms
+    // of the kit's keyboard arbiter, so an embedder implementing this needs both to compile.
+    api project(':vscript-lang')
+    api project(':vscript-ui')
+}
+
+base {
+    archivesName = 'editor-host'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'editor-host'
+            pom {
+                name = 'editor-host'
+                description = 'What an editor asks its host for: type styles, value catalogues, typed text.'
+            }
+        }
+    }
+}

@@ -1,0 +1,50 @@
+plugins {
+    // Lets Gradle provision a matching JDK 17 toolchain rather than needing one installed.
+    //
+    // **1.0.0, not 0.8.0, and it is Gradle 9 that decides that.** 0.8.0's `DistributionsKt` initialises a
+    // vendor table naming `JvmVendorSpec.IBM_SEMERU`, a field Gradle 9 removed — so the class fails to
+    // initialise and any toolchain this resolver is asked to provision dies with a bare
+    // `NoSuchFieldError: IBM_SEMERU`. It only fires when a toolchain has to be DOWNLOADED, which is why a
+    // machine that already has every required JDK never sees it and an IDE sync on a fresh one always does.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'vscript'
+
+// **One module today, and the skeleton for the rest.** The split plan brings the runtime, the widget kit,
+// and a `build.gradle` of its own, with the arrows between them stated in dependencies rather than
+// implied by everything living in one source set. See `vscript/VSCRIPT_SPLIT_PLAN.md` §1.
+include 'vscript-lang'
+include 'vscript-ui'
+include 'vscript-runtime'
+include 'vscript-runview'
+include 'editor-host'
+include 'editor-graph'
+include 'editor-text'
+
+// The standalone editor and its catalogue — **only when this repo is the build being run**, for the same
+// shell-nodes/build.gradle; kept out of `:vscript-shell` so that module keeps knowing no game), and it
+// has no reason to have. `:vscript-shell` depends on `:shell-nodes`, so the two leave together.
+//
+// Nothing a consumer substitutes reaches either: the closure of vscript-lang, vscript-ui, vscript-runtime,
+// vscript-runview, editor-host and editor-graph is exactly those six.
+if (gradle.parent == null) {
+    include 'vscript-shell'
+}
+
+// the only one that was ever in its own repo, which cost it an `includeBuild`, a dependency substitution
+// and two paths traversing out of the checkout. It depends on `:vscript-lang` as a project now.
+//
+// **Only when this repo is the build being run.** No consumer that includes this build depends on the
+// plugin, but a composite resolves every module's classpath during an IDE sync — and this one's needs two
+// sensible prerequisite for building a mod that only wants the language, and the failure arrives as an
+// unresolved-dependency page with nothing pointing back here. Open this repo directly to work on the plugin.
+if (gradle.parent == null) {
+}
+
+//
+// get the language. Gradle does not refuse it outright; it fails much later and much worse, as a page of
+//
+// §1 of the split plan is explicit that nothing leaves this repo precisely so that no composite cycle is
+// published artifact — mavenLocal first, so a `publishToMavenLocal` in the SDK is picked up on the next
+// build. One extra step in the nodes dev loop, in exchange for a repo that has no cycle to fall into.

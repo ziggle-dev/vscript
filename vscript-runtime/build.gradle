@@ -1,0 +1,70 @@
+/*
+ * Running a compiled program, with debugging.
+ *
+ * ### It depends on the language and on nothing above it
+ *
+ * That arrow is the module's whole reason for existing separately, and it was not true until recently:
+ * `ScriptRuntime` imported the workbench, the canvas's document model and the editor's persisted
+ * preferences. It imports none of them now, and `ArchitectureTest` in the client says so on every build.
+ *
+ * Two consequences worth knowing:
+ *
+ * - **The runtime draws nothing**, which is what lets a program be run headlessly — by a test, by a CI
+ *   compile check, or by the IntelliJ plugin, which has no ImGui and never will. There is no toolkit
+ *   dependency here and there must not be one.
+ * - **It owns the document**, not the canvas. `EditorDoc`, `DocumentSource` and `History` were filed under
+ *   `editor/graph` by history rather than by design — 1,107 lines with a single mention of imgui between
+ *   them, and that one is in a comment. They are the document a run operates on, its import resolution and
+ *   its undo stack, so they live with the thing that runs one.
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    // `api`, not `implementation`: `ScriptRuntime` puts the language's own types on its public signatures —
+    // a `NodeCatalog` in, `Issue`s out — so a consumer that runs a program needs them to compile.
+    api project(':vscript-lang')
+
+    // The runtime's own tests build graphs with the language's fixtures and drive real fibers.
+    testImplementation testFixtures(project(':vscript-lang'))
+    testImplementation 'com.google.code.gson:gson:2.8.5'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}
+
+base {
+    archivesName = 'vscript-runtime'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'vscript-runtime'
+            pom {
+                name = 'vscript-runtime'
+                description = 'Runs a compiled vs program: scheduling, debugging, breakpoints, the document.'
+            }
+        }
+    }
+}

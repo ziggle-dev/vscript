@@ -1,0 +1,58 @@
+/*
+ * Views of a RUNNING program — the console, the debug panel, the node colours a log row is tinted with.
+ *
+ * ### Shared by both surfaces, and belonging to neither
+ *
+ * A program runs the same whichever surface wrote it, so a console is not the canvas's console. That is
+ * the whole reason this is its own module rather than part of one — and it was not true until recently:
+ * the run views reached into the canvas for two colour helpers, a rich-text drawer and a node-colour rule.
+ * None of the four turned out to be about a canvas. `ArchitectureTest` in the client enforces it now.
+ *
+ * The arrows are `runtime`, `ui` and the language. No dependency on either surface, and there must not be
+ * one, or the module becomes part of whichever surface it reaches into.
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    // `api` for both: a run view takes a `ScriptRuntime`/`ScriptLog` on its own signatures, and draws with
+    // the kit's `Theme` and `PanelBits`, so an embedder that hosts one needs both to compile.
+    api project(':vscript-runtime')
+    api project(':vscript-ui')
+
+    // ImGui is `compileOnly` here for the reason it is in `:vscript-ui`: whoever opens a window supplies
+    // the natives, and a second copy is how two ImGui contexts end up in one process.
+    compileOnly 'io.github.spair:imgui-java-binding:1.90.0'
+}
+
+base {
+    archivesName = 'vscript-runview'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'vscript-runview'
+            pom {
+                name = 'vscript-runview'
+                description = 'Views of a running vs program: console, debug panel, breakpoints.'
+            }
+        }
+    }
+}

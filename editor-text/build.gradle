@@ -1,0 +1,78 @@
+/*
+ * The code view: the text authoring surface.
+ *
+ * ### It depends on the canvas no more
+ *
+ * This module used to declare `implementation project(':editor-graph')`, and the header here called it a
+ * debt with a name: the split plan is explicit that the two surfaces share the registered node surface
+ * and the bytecode and nothing else, and this one was built on the canvas's in-node text field — caret,
+ * selection, word motion, layout, all written for typing a literal into a pin.
+ *
+ * The debt is discharged, and NOT the way it was budgeted for. The plan expected phase 6 to pay it by
+ * building the code view a text core of its own. Measured first, the four borrowed types imported ImGui
+ * and `Theme` and nothing else, and the single thing that made them the canvas's was a default argument
+ * — `measure` fell back to `CanvasRenderer.textWidth`, which the code view was already overriding. So
+ * the widget went DOWN into the kit as `dev.ziggle.imgui.TextEdit`, both surfaces became consumers of it,
+ * and the edge simply stopped existing.
+ *
+ * `IndependentSurfacesTest` is what `RatchetTest` turned into: it asserts the borrow list is empty and
+ * that this file does not name the canvas again.
+ *
+ * ### What is still worth building
+ *
+ * A real text core — line index, caret set, edit journal, folding, markers, breakpoints addressed by
+ * line. That is a FEATURE this surface wants, not a dependency it has. The two were tangled in the plan
+ * because the feature was the assumed route to the independence; the independence arrived first.
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    implementation project(':vscript-ui')
+    api project(':vscript-runtime')
+    api project(':editor-host')
+
+    // **The ratchet.** See the note above; phase 6 deletes this line.
+
+    compileOnly 'io.github.spair:imgui-java-binding:1.90.0'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}
+
+base {
+    archivesName = 'editor-text'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'editor-text'
+            pom {
+                name = 'editor-text'
+                description = 'The vs text authoring surface: buffer, highlighting, the code view.'
+            }
+        }
+    }
+}

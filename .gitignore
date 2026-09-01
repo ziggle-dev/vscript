@@ -1,0 +1,32 @@
+.gradle/
+
+# **The IntelliJ Platform sandbox, and it lands HERE, not in the module.**
+#
+# `:vscript-idea` runs its tests in a throwaway IDE sandbox, and the plugin puts it at the root of the
+# BUILD — not inside the module that asked for it. `vscript-idea/.gitignore` names it and never matched,
+# so a `git add -A` after the first test run swept in 2,258 files and —72MB of caches, indexes and a
+# bundled executable.
+.intellijPlatform/
+out/
+*.iml
+.idea/
+.kotlin/
+
+# **Build output, anchored to the root and to one module deep — NOT `build/` on its own.**
+#
+# An unanchored `build/` matches a directory of that name at ANY depth, and `:vscript-idea` has a SOURCE
+# own repo that pattern silently kept four source files out of version control, so a fresh clone did not
+# compile — it worked only where the files happened to exist on disk. Folding the repo in is what found it.
+#
+# Two levels, because this is a multi-module build: output lands in `build/` at the root and in
+# `<module>/build/`, and nowhere deeper.
+/build/
+/*/build/
+
+# Alternate build dirs (-PoutDir=...), used so a build can run while the client holds build/libs.
+/build-*/
+/*/build-*/
+
+# JVM crash dumps
+hs_err_pid*.log
+replay_pid*.log

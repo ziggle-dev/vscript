@@ -1,0 +1,54 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    api project(':vscript-runtime')
+    api project(':vscript-runview')
+    api project(':editor-host')
+
+    // Whoever opens a window supplies the natives — see `:vscript-ui`.
+    compileOnly 'io.github.spair:imgui-java-binding:1.90.0'
+
+    // The geometry tests reach `internal` members, which is what `internal` is for and what stopped
+    // working the moment this became its own module — a test of the canvas belongs with the canvas.
+    testImplementation 'io.github.spair:imgui-java-binding:1.90.0'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}
+
+base {
+    archivesName = 'editor-graph'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'editor-graph'
+            pom {
+                name = 'editor-graph'
+                description = 'The vs node-graph authoring surface: canvas, palette, outline, pickers.'
+            }
+        }
+    }
+}

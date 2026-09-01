@@ -1,0 +1,74 @@
+/*
+ * The root of the language repo — a coordinator, and deliberately almost empty.
+ *
+ * ### Why there is a root project at all
+ *
+ * This repo was ONE module until the modules the split plan calls for arrived: `:vscript-lang` is the
+ * language, and the runtime, the widget kit and the two editing surfaces come in beside it. A root that
+ * declares the things every module shares is what keeps those modules from each repeating the Kotlin
+ * version, the toolchain and the publishing block — and repeating them is how two of them come to be
+ * compiled by different compilers, which is a class of bug this repo has already paid for once.
+ *
+ * What is NOT here: dependencies. Each module states its own, because the whole point of the split is
+ * that the arrows between them are visible and enforced. A `subprojects { dependencies { … } }` block
+ * would make every module depend on everything and quietly undo that.
+ */
+plugins {
+    // Applied `apply false` so the version is stated once and each module opts in. Declaring it here
+    // without this makes the root a Kotlin project too, which it is not — it has no source.
+    id 'org.jetbrains.kotlin.jvm' version '2.3.21' apply false
+}
+
+/**
+ * Send a module's whole output somewhere else — `gradlew.bat test -PoutDir=build-x`.
+ *
+ * **So a build can run while the client is up.** A running client holds the language jar open and Windows
+ * will not let Gradle replace it; the failure is not "the jar is locked" but a HALF-WRITTEN jar, which the
+ * live client then reports as a bare missing-class name from `graph check` — a symptom that reads like a
+ * source problem and is not one. Pointing the build at its own directory means the file the client is
+ * using is never opened for writing at all.
+ *
+ * **Per module, resolved against the MODULE.** `-PoutDir=build-x` puts `:vscript-lang`'s output in
+ * `vscript-lang/build-x`, not in a shared one every module would then fight over. That is why this is
+ * `subprojects` and not `allprojects` with a single path.
+ *
+ * Deliberately not named `buildDir`: that is a Gradle project property of its own and setting it from the
+ * command line means something else.
+ */
+subprojects {
+    /*
+     * **In THIS build, `dev.ziggle:vscript` is `:vscript-lang`.**
+     *
+     * It has to be said, because a consumer can arrive at the language two ways at once. `:vscript-idea`
+     * depends on `:vscript-lang` as a project AND on the published `dev.ziggle:vscript-nodes`, which brings
+     * `dev.ziggle:vscript` with it — so without this the classpath carries the project's classes and a
+     * published jar's, and whichever wins decides. It resolved to the jar, and the plugin's tests failed
+     * 205-of-433 with `NoSuchMethodError` on a constructor that is plainly right there in the source.
+     *
+     * The other repos say the same thing in their `includeBuild` blocks. This is that statement for the
+     * build where the language is not an included build but a module.
+     */
+    configurations.configureEach {
+        resolutionStrategy.dependencySubstitution {
+            substitute module('dev.ziggle:vscript') using project(':vscript-lang')
+        }
+    }
+
+    if (rootProject.hasProperty('outDir')) {
+        layout.buildDirectory = file(rootProject.property('outDir'))
+    }
+    group = 'dev.ziggle'
+    // The LANGUAGE's version, deliberately not the client's. A consumer — the IntelliJ plugin above all —
+    // needs to be able to say "this document/catalogue is newer than I understand", which is the same job
+    // GraphDoc.FORMAT already does for documents and which a client version number cannot do.
+    //
+    // One number for the repo rather than one per module: they are released together and a consumer
+    // pinning three versions that must match is a consumer with three ways to get it wrong.
+    //
+    // 1.2.0: MINOR -- five calendar verbs (`localDate`, `hourOfDay`, `minuteOfHour`, `dayOfWeek`,
+    // `msUntilLocal`) on an injectable `java.time.Clock`, and `as` now keeps its type arguments so a
+    // document decodes straight into `LIST<T>` / `MAP<STRING, T>` instead of needing a record declared to
+    // wrap it in. Both are additive: the clock defaults to the system one, and a target with arguments
+    // used to be a parse error, so nothing that compiled before compiles differently now.
+    version = '1.2.0'
+}

@@ -1,0 +1,156 @@
+/*
+ * The workbench, and the windows it can be shown in.
+ *
+ * ### What a "shell" is here
+ *
+ * `ScriptsPanel` opens documents, owns the tab strip and hosts whichever authoring surface is showing;
+ * `DetachedEditorWindow` and `GlfwEditorWindow` put it in an OS window. So this module depends on BOTH
+ * surfaces — it is above them, which is what a workbench is, and why the surfaces were not allowed to
+ * depend on it.
+ *
+ * ### It knows no game, and that is what took the longest
+ *
+ * The workbench was the last thing in the editor that did. It named this client's node library, its file
+ * sandbox, its value converter, its run lifecycle and its catalogue dump — five reaches, in the one class
+ * that everything else hangs off. They arrive as one `ScriptDomain` now, supplied by whoever opens the
+ * editor, and `ScriptDomain.NONE` is a real editor with an empty catalogue rather than a stub.
+ *
+ * That is what makes the module's own gate meaningful: **open a `.vs` and a `.json` with no game
+ * attached**. Nothing here can tell the difference.
+ */
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'maven-publish'
+}
+
+repositories {
+    // enough -- `shellRuntime` is a configuration of this project and searches this list. The pack is a
+    // published artifact here rather than an included build, because including the SDK would be a
+    mavenLocal()
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions { javaParameters = true }
+}
+
+// **Declared before the first `dependencies` block, because both of them read it.** Gradle evaluates a
+// build file top to bottom, so a `def` below the block that uses it is an unknown property rather than a
+// forward reference -- and the message names the dependency handler, not the line.
+def osName = System.getProperty('os.name').toLowerCase()
+def lwjglNatives =
+    osName.contains('win') ? 'natives-windows'
+        : osName.contains('mac') ? 'natives-macos'
+        : 'natives-linux'
+def imguiNatives =
+    osName.contains('win') ? 'imgui-java-natives-windows'
+        : osName.contains('mac') ? 'imgui-java-natives-macos'
+        : 'imgui-java-natives-linux'
+
+dependencies {
+    // Both surfaces: the workbench hosts either, which is the whole point of it.
+    api project(':editor-graph')
+    api project(':editor-text')
+
+    compileOnly 'io.github.spair:imgui-java-binding:1.90.0'
+    // The GL3 renderer backend, the GLFW platform backend, and LWJGL. All `compileOnly`: whoever opens a
+    // window supplies them, and which of the two window backends is usable depends on the host — see
+    // `GlfwEditorWindow`, which is deliberately not on the running client's classpath.
+    compileOnly('io.github.spair:imgui-java-lwjgl3:1.90.0') { exclude group: 'org.lwjgl' }
+    compileOnly 'org.lwjgl:lwjgl:3.3.2'
+    compileOnly 'org.lwjgl:lwjgl-opengl:3.3.2'
+    compileOnly 'org.lwjgl:lwjgl-glfw:3.3.2'
+    compileOnly 'org.lwjgl:lwjgl-opengl:3.3.2:natives-windows'
+    // `AWTGLCanvas` and `GLData` — the in-client window's GL surface. `lwjglx:lwjgl3-awt`, not an
+    // `org.lwjgl` artifact, and its transitive LWJGL is excluded so there is exactly one copy on any
+    // consumer's classpath.
+    compileOnly('org.lwjglx:lwjgl3-awt:0.1.8') { exclude group: 'org.lwjgl' }
+    compileOnly 'org.lwjgl:lwjgl-jawt:3.3.2'
+
+    // GraphDoc's format, for the panel's own document handling.
+    compileOnly 'com.google.code.gson:gson:2.8.5'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    // The gate builds a REAL ScriptsPanel, so the things the main source set only compiles against have to
+    // actually be there. Not the natives and not a window backend: `ShellGateTest` never opens a frame,
+    // which is precisely what makes it a CI test.
+    testImplementation 'io.github.spair:imgui-java-binding:1.90.0'
+    testImplementation 'com.google.code.gson:gson:2.8.5'
+    // **The NATIVES, for driving the UI headlessly.** ImGui is immediate-mode: a context, an atlas and a
+    // display size are enough to build frames and inject input -- no GL, no window. That is what lets the
+    // widgets be clicked in a test instead of only by a person. Platform-selected, same as `shellRuntime`.
+    testImplementation "io.github.spair:${imguiNatives}:1.90.0"
+}
+
+/*
+ * Running the editor standalone — the split plan's phase 5 gate.
+ *
+ * Everything the module DEPENDS on is `compileOnly`, because a consumer that embeds the workbench already
+ * has ImGui and a GL context and must not be handed a second copy. That leaves nothing to run with, so
+ * the standalone case gets a configuration of its own rather than promoting those dependencies and
+ * pushing them onto every embedder.
+ *
+ * **The natives are platform-specific and there is no "all platforms" artifact.** LWJGL ships one jar per
+ * OS and imgui-java does the same, so the classifier is chosen from the JVM running the build.
+ */
+configurations {
+    shellRuntime
+}
+
+// `os.name` here is the machine assembling the classpath, which for a task that then LAUNCHES a window on
+// that same machine is the right question to ask.
+dependencies {
+    shellRuntime project(':vscript-shell')
+    // The game's catalogue, on the standalone editor's runtime classpath ONLY. `:vscript-shell` does not
+    // depend on it and does not name it -- `Main` finds it with `ServiceLoader`. Without this line the
+    // editor still runs, with an empty catalogue.
+    shellRuntime 'io.github.spair:imgui-java-binding:1.90.0'
+    shellRuntime "io.github.spair:${imguiNatives}:1.90.0"
+    // The GL3 renderer and the GLFW platform backend. Unlike the in-client path, LWJGL is NOT excluded:
+    // standalone there is no host copy to collide with, and these are the only ones on the classpath.
+    shellRuntime 'io.github.spair:imgui-java-lwjgl3:1.90.0'
+    ['lwjgl', 'lwjgl-glfw', 'lwjgl-opengl'].each {
+        shellRuntime "org.lwjgl:$it:3.3.2"
+        shellRuntime "org.lwjgl:$it:3.3.2:$lwjglNatives"
+    }
+    shellRuntime 'com.google.code.gson:gson:2.8.5'
+}
+
+tasks.register('runShell', JavaExec) {
+    group = 'application'
+    description = 'Open the vs editor standalone — no game, no client. Pass a workspace and a document with --args.'
+    mainClass = 'dev.ziggle.vscript.shell.Main'
+    classpath = configurations.shellRuntime
+    // GLFW must own the main thread on macOS, and the JVM's main thread is not it unless asked.
+    if (osName.contains('mac')) jvmArgs '-XstartOnFirstThread'
+    // `-Pframes=N` draws N frames and exits — the smoke run, see `GlfwEditorWindow.run`.
+    if (project.hasProperty('frames')) systemProperty 'ziggle.vscript.frames', project.property('frames')
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}
+
+base {
+    archivesName = 'vscript-shell'
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'vscript-shell'
+            pom {
+                name = 'vscript-shell'
+                description = 'The vs workbench and the windows it runs in: AWT in-process, or GLFW standalone.'
+            }
+        }
+    }
+}

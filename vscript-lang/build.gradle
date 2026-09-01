@@ -1,0 +1,138 @@
+plugins {
+    // No version -- the root declares it once with `apply false`, so every module in this repo is
+    // compiled by the same compiler. Two modules on two Kotlin versions is a real hazard here: the
+    // IntelliJ plugin links this jar directly and a metadata mismatch surfaces there as an
+    // unresolvable class.
+    id 'org.jetbrains.kotlin.jvm'
+    // The graph/VM test fixtures are consumed by the CLIENT's tests too — the canvas and the debug
+    // adapter still need to build a graph and drive a chunk. Publishing them as a proper test-fixtures
+    // artifact is the alternative to a second copy of GraphBuilder drifting away from this one.
+    id 'java-test-fixtures'
+    id 'maven-publish'
+}
+
+// `group`, `version` and the `-PoutDir` redirect are the ROOT's -- stated once for every module
+// in the repo. See the root `build.gradle` for why each is there, and for the changelog this
+// version line used to carry.
+
+/*
+ * **The published artifact is `vscript`, not `vscript-lang`.**
+ *
+ * The module is called `:vscript-lang` because that is what it is -- the language, beside the runtime and
+ * the editors that come in next. The ARTIFACT keeps the name every consumer already pins, because the
+ * split is an internal reorganisation and nobody outside should have to notice it.
+ *
+ * `archivesName` rather than only the publication's `artifactId`, and the difference is load-bearing:
+ * Gradle's automatic dependency substitution for an `includeBuild` matches on `group` + the archive name.
+ * Setting only the publication left `dev.ziggle:vscript` matching nothing, so the SDK, the client and
+ * the IntelliJ plugin all fell back to whatever stale jar was in mavenLocal -- which fails as a page of
+ * unresolved references to classes that are plainly there.
+ */
+base {
+    archivesName = 'vscript'
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
+    // Real parameter names in the bytecode, so anything reflecting over a host function sees `name` rather
+    // than `a1`. Matches vscript-core, which this used to be part of.
+    compilerOptions { javaParameters = true }
+}
+
+dependencies {
+    // gson is used by ONE file — model/GraphDoc.kt, the document format — and is deliberately `compileOnly`
+    // so it is not forced onto a consumer's runtime classpath.
+    //
+    // The version is pinned LOW on purpose. In the client the effective gson is the copy shaded into the
+    // let GraphDoc reach for API that does not exist where it actually runs — a bug this repo has already
+    // paid for once, and which surfaces at runtime as NoSuchMethodError a long way from the cause.
+    // Consumers supply their own: the client via the fork jar, the IntelliJ plugin by bundling one.
+    compileOnly 'com.google.code.gson:gson:2.8.5'
+    testImplementation 'com.google.code.gson:gson:2.8.5'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+
+    // The fixtures compile against the same assertion library their consumers use.
+    testFixturesImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'vscript'
+            pom {
+                name = 'vscript'
+                description = 'The vs visual/text scripting language: lexer, parser, compiler and register VM.'
+            }
+        }
+    }
+}
+
+/**
+ * The front-end load benchmark — what a script costs BEFORE its first frame.
+ *
+ * Not part of `build`. A timing is a measurement, not an assertion, and a number that moves with the
+ * machine has no business failing a build; `LoadBenchTest` is the half that does assert, and it asserts
+ * the SHAPE of the curve rather than any millisecond count.
+ *
+ * ```
+ * gradlew.bat bench -PoutDir=build-bench                     # while the client is up
+ * gradlew.bat bench --args="--reps 40 --warmup 8"            # steadier numbers
+ * ```
+ */
+tasks.register('bench', JavaExec) {
+    group = 'verification'
+    description = 'Front-end load benchmark: lex/parse/resolve/emit over import trees of every size.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.ziggle.vscript.bench.LoadBench'
+}
+
+/**
+ * The same benchmark against the REAL scripts and the REAL catalogue — see [RealCorpusBench].
+ *
+ * Separate from `bench` because it needs two things a fresh clone does not have: the `plugins/scripts`
+ * tree beside this repo, and a catalogue dumped by a client that has run at least once. It reports what
+ * is missing and exits rather than failing.
+ */
+/**
+ * Run the in-language `test` blocks in the real scripts tree — `gradlew.bat vsTest`.
+ *
+ * Same two inputs as `benchReal` and the same bargain: the `plugins/scripts` tree beside this repo, and a
+ * catalogue written by a client that has run or been built once. It reports what is missing and exits 0
+ * rather than failing a fresh clone; a test that FAILS exits 1.
+ *
+ * A `JavaExec` rather than a JUnit test on purpose. These are the scripts' tests, not the language's — they
+ * belong to a tree that lives outside this repo and may not be there, and folding them into `test` would
+ * make `gradlew build` depend on a checkout it cannot require.
+ *
+ *   gradlew.bat vsTest                    # every _test document
+ *   gradlew.bat vsTest --args="scheduler" # only the ones whose ref contains it
+ */
+tasks.register('vsTest', JavaExec) {
+    group = 'verification'
+    description = 'Run the in-language tests in the real scripts tree.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.ziggle.vscript.test.VsTestMain'
+}
+
+tasks.register('benchReal', JavaExec) {
+    group = 'verification'
+    description = 'Load benchmark over the real scripts tree, using the catalogue the client dumped.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.ziggle.vscript.bench.RealCorpusBench'
+}
