@@ -233,7 +233,7 @@ object ValuePicker {
                         // Fitted INSIDE the row rather than scaled to fill it: a wiki render is a tall
                         // portrait and stretching one to a square makes every NPC look melted.
                         val box = ROW_H - 4f
-                        dl.addImage(region.texture.toLong(), lx + 4f, ry + 2f, lx + 4f + box, ry + 2f + box, region.u0, region.v0, region.u1, region.v1)
+                        dl.addImage(region.texture, lx + 4f, ry + 2f, lx + 4f + box, ry + 2f + box, region.u0, region.v0, region.u1, region.v1)
                     }
                     textX = lx + ICON_COL
                 }
@@ -375,7 +375,7 @@ object ValuePicker {
         val y1 = y0 + PREVIEW
         dl.addRectFilled(x0 - 4f, y0 - 4f, x1 + 4f, y1 + 4f, PANEL_BG, 6f, ImDrawFlags.RoundCornersAll)
         dl.addRect(x0 - 4f, y0 - 4f, x1 + 4f, y1 + 4f, BORDER, 6f, ImDrawFlags.RoundCornersAll, 1f)
-        dl.addImage(region.texture.toLong(), x0, y0, x1, y1, region.u0, region.v0, region.u1, region.v1)
+        dl.addImage(region.texture, x0, y0, x1, y1, region.u0, region.v0, region.u1, region.v1)
     }
 
     private const val PREVIEW = 96f
