@@ -22,15 +22,16 @@ include 'editor-host'
 include 'editor-graph'
 include 'editor-text'
 
-// The standalone editor and its catalogue — **only when this repo is the build being run**, for the same
-// shell-nodes/build.gradle; kept out of `:vscript-shell` so that module keeps knowing no game), and it
-// has no reason to have. `:vscript-shell` depends on `:shell-nodes`, so the two leave together.
+// The standalone editor — **included for consumers too, because one of them genuinely depends on it.**
 //
-// Nothing a consumer substitutes reaches either: the closure of vscript-lang, vscript-ui, vscript-runtime,
-// vscript-runview, editor-host and editor-graph is exactly those six.
-if (gradle.parent == null) {
-    include 'vscript-shell'
-}
+// The guard this used to carry (`gradle.parent == null`) was right when `:vscript-shell` dragged a game's
+// node catalogue in behind it. It no longer does: `:shell-nodes` is gone and the module's whole closure is
+// `:editor-graph` + `:editor-text`, which every consumer already substitutes. What the guard costs is a
+// consumer that embeds the workbench itself — osrsx-client declares `api 'dev.ziggle:vscript-shell'` and
+// uses `ScriptsPanel` from eleven files, `ui/Chrome.kt` among them. With the module withheld from the
+// composite its substitution points at a project the composite does not hold, and EVERY task in that build
+// dies at configuration time with "Project with path ':vscript-shell' not found in build ':vscript'".
+include 'vscript-shell'
 
 // the only one that was ever in its own repo, which cost it an `includeBuild`, a dependency substitution
 // and two paths traversing out of the checkout. It depends on `:vscript-lang` as a project now.
