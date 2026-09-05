@@ -198,6 +198,62 @@ class ChunkCodecTest {
         assertTrue(e.message!!.contains("constant pool"), "unhelpful message: ${e.message}")
     }
 
+    /**
+     * **A pool is not only the values a document writes.** The compiler parks its own machinery there too
+     * — a record's shape so an instruction can build one, a function reference, a JSON schema an `as` cast
+     * decodes against. The first cut of this codec assumed otherwise and rejected two perfectly ordinary
+     * scripts while telling them their compiler had done something wrong; every one of these was found by
+     * packing a real corpus rather than by reasoning about it.
+     */
+    @Test
+    fun `the compiler's own pool entries round-trip`() {
+        val schema = dev.ziggle.vscript.json.JsonSchema(
+            root = dev.ziggle.vscript.json.JsonSchema.Shape.Record(
+                "Doc",
+                listOf(
+                    dev.ziggle.vscript.json.JsonSchema.Field(
+                        "itemCount", "item_count",
+                        dev.ziggle.vscript.json.JsonSchema.Shape.Scalar(dev.ziggle.vscript.json.JsonSchema.Kind.INT),
+                    ),
+                    dev.ziggle.vscript.json.JsonSchema.Field(
+                        "tags", "tags",
+                        dev.ziggle.vscript.json.JsonSchema.Shape.ListOf(
+                            dev.ziggle.vscript.json.JsonSchema.Shape.Optional(
+                                dev.ziggle.vscript.json.JsonSchema.Shape.Ref("Tag"),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            records = mapOf(
+                "Tag" to dev.ziggle.vscript.json.JsonSchema.Shape.Record("Tag", emptyList()),
+            ),
+        )
+        val constants = arrayOf<Any?>(
+            StructShape("Beat", listOf("ms", "label")),
+            FunctionValue(3, "double"),
+            FunctionValue(7, "closure", listOf(1, "two")),
+            schema,
+        )
+        val c = Chunk(name = "pool", code = IntArray(0), constants = constants, maxRegs = 0)
+        val back = ChunkCodec.read(ChunkCodec.write(ProgramImage(arrayOf(c), listOf(c)))).functions[0]
+
+        val shape = back.constants[0] as StructShape
+        assertEquals("Beat", shape.type)
+        assertEquals(listOf("ms", "label"), shape.names)
+
+        // FunctionValue's equals covers index and captured, which is what identity means for one.
+        assertEquals(constants[1], back.constants[1])
+        assertEquals(constants[2], back.constants[2])
+
+        val s2 = back.constants[3] as dev.ziggle.vscript.json.JsonSchema
+        val root = s2.root as dev.ziggle.vscript.json.JsonSchema.Shape.Record
+        assertEquals("Doc", root.type)
+        assertEquals(listOf("itemCount", "tags"), root.fields.map { it.name })
+        assertEquals("item_count", root.fields[0].key, "a renamed JSON key must survive")
+        assertEquals(setOf("Tag"), s2.records.keys)
+    }
+
     // ---- refusing what it cannot read ----------------------------------------------------------------
 
     @Test

@@ -90,6 +90,24 @@ subprojects {
     // One number for the repo rather than one per module: they are released together and a consumer
     // pinning three versions that must match is a consumer with three ways to get it wrong.
     //
+    // 1.3.1: PATCH -- the codec and the checker, corrected against a real corpus of 117 documents. Every
+    // one of these was found by packing that corpus, not by reasoning about the code.
+    //
+    // **A constant pool is not only the values a document writes.** The compiler parks its own machinery
+    // there: `StructShape` (so an instruction can build a record), `FunctionValue` (a function as a value,
+    // an index into the linked table plus what it closed over) and `JsonSchema` (the shape an `as` cast
+    // decodes against, nine Shape variants deep). The first cut rejected all three as "a live host value
+    // that should never have been put there" -- a message confidently wrong about its own compiler, and it
+    // meant no script declaring a record could be packed at all.
+    //
+    // `PackMain` now reads back what it wrote, off disk, and re-derives the host set from the bytecode. A
+    // build tool that only ever encodes finds out its encoder is wrong on somebody else's machine.
+    //
+    // The whole-tree check told the truth about a corpus for the first time, having been wrong twice. It walked `refs`, which holds several aliases per document, so every file was compiled
+    // two or three times and every error reported as many; and it compiled a `_test` document through the
+    // ordinary door, which does not grant access to the internals of the module under test -- so every
+    // private function a test exercises came back as "no function called", reading as a broken suite.
+    //
     // 1.3.0: MINOR -- a compiled program can be WRITTEN DOWN, and there is a build tool for it. All
     // additive; nothing that compiled before compiles differently.
     //
@@ -115,5 +133,5 @@ subprojects {
     // document decodes straight into `LIST<T>` / `MAP<STRING, T>` instead of needing a record declared to
     // wrap it in. Both are additive: the clock defaults to the system one, and a target with arguments
     // used to be a parse error, so nothing that compiled before compiles differently now.
-    version = '1.3.0'
+    version = '1.3.1'
 }

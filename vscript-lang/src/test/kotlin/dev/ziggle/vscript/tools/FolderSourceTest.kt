@@ -95,6 +95,23 @@ class FolderSourceTest {
         assertNotNull(src.load("a"))
     }
 
+    /**
+     * **One entry per FILE, not per reference.** A document answers to two or three names, so a checker
+     * iterating [FolderSource.refs] compiles each file that many times and reports every error as many —
+     * "79 of 227 failed" about a tree of a hundred files, which is a number nobody can act on.
+     */
+    @Test
+    fun `documents lists each file once, however many names it answers to`() {
+        val src = tree()
+        assertEquals(5, src.documents.size, "one per file: ${src.documents.keys}")
+        assertTrue(src.refs.size > src.documents.size, "the fixture should have aliases to collapse")
+        assertEquals(
+            src.documents.values.map { it.absolutePath }.sorted(),
+            src.documents.values.map { it.absolutePath }.sorted().distinct(),
+            "a file must not appear twice",
+        )
+    }
+
     @Test
     fun `the index is stable across two reads`() {
         val src = tree()

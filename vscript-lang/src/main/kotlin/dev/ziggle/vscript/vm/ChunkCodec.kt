@@ -1,5 +1,6 @@
 package dev.ziggle.vscript.vm
 
+import dev.ziggle.vscript.json.JsonSchema
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -99,7 +100,10 @@ object ChunkCodec {
     const val FORMAT = 1
 
     // ---- value tags -------------------------------------------------------------------------------
-    // The closed set of things a constant pool or a globals array can hold. See [writeValue].
+    // What a constant pool or a globals array can hold. NOT only the values a document writes: the
+    // compiler also parks its own machinery there — a record's shape, a function reference — and assuming
+    // otherwise is what made the first cut of this codec reject two perfectly ordinary scripts while
+    // telling them their compiler had done something wrong. See [writeValue].
     private const val T_NULL = 0
     private const val T_INT = 1
     private const val T_LONG = 2
@@ -109,6 +113,42 @@ object ChunkCodec {
     private const val T_LIST = 6
     private const val T_MAP = 7
     private const val T_STRUCT = 8
+    /**
+     * A record's SHAPE — its type name and field names, with no values.
+     *
+     * Not a value a document writes; the compiler puts one in the pool so an instruction that builds a
+     * record has the field order to build it with. It was missing from the first cut of this codec, which
+     * assumed a pool held only literals and defaults, and every real script that declares a record failed
+     * to pack with "this is a live host value that should never have been put there" — a message that was
+     * confidently wrong about its own compiler.
+     */
+    private const val T_SHAPE = 9
+    /**
+     * A function AS A VALUE — an index into the linked program, its name, and whatever it closed over.
+     *
+     * The index is the same table this codec writes in order, so it survives the round trip unchanged. A
+     * named function captures nothing; a lambda copies the locals it read, which are themselves values and
+     * recurse through [writeValue].
+     */
+    private const val T_FUNCTION = 10
+    /**
+     * A JSON SCHEMA — the shape an `as` cast decodes against.
+     *
+     * Built by the compiler from the target type and parked in the pool, because the CAST instruction has
+     * to know the field names, the keys they are read from and the nesting before it sees any data.
+     */
+    private const val T_SCHEMA = 11
+
+    // `JsonSchema.Shape` variants, in their own tag space.
+    private const val S_RAW = 0
+    private const val S_ANYTHING = 1
+    private const val S_SCALAR = 2
+    private const val S_LIST = 3
+    private const val S_MAP = 4
+    private const val S_CHOICE = 5
+    private const val S_REF = 6
+    private const val S_RECORD = 7
+    private const val S_OPTIONAL = 8
 
     // ---- program ----------------------------------------------------------------------------------
 
@@ -311,6 +351,25 @@ object ChunkCodec {
                 out.writeByte(T_MAP); out.writeInt(v.size)
                 for ((k, e) in v) { writeValue(out, k); writeValue(out, e) }
             }
+            is JsonSchema -> {
+                out.writeByte(T_SCHEMA)
+                writeShape(out, v.root)
+                out.writeInt(v.records.size)
+                for ((name, rec) in v.records) { writeString(out, name); writeShape(out, rec) }
+            }
+            is FunctionValue -> {
+                out.writeByte(T_FUNCTION)
+                out.writeInt(v.index)
+                writeString(out, v.name)
+                out.writeInt(v.captured.size)
+                for (c in v.captured) writeValue(out, c)
+            }
+            is StructShape -> {
+                out.writeByte(T_SHAPE)
+                writeString(out, v.type)
+                out.writeInt(v.names.size)
+                for (n in v.names) writeString(out, n)
+            }
             is StructValue -> {
                 out.writeByte(T_STRUCT)
                 writeString(out, v.type)
@@ -360,6 +419,24 @@ object ChunkCodec {
             }
             map
         }
+        T_SCHEMA -> {
+            val root = readShape(inp)
+            val records = LinkedHashMap<String, JsonSchema.Shape.Record>()
+            repeat(count(inp)) {
+                val name = readString(inp)
+                records[name] = readShape(inp) as JsonSchema.Shape.Record
+            }
+            JsonSchema(root, records)
+        }
+        T_FUNCTION -> {
+            val index = inp.readInt()
+            val name = readString(inp)
+            FunctionValue(index, name, List(count(inp)) { readValue(inp) })
+        }
+        T_SHAPE -> {
+            val type = readString(inp)
+            StructShape(type, List(count(inp)) { readString(inp) })
+        }
         T_STRUCT -> {
             val type = readString(inp)
             val names = List(count(inp)) { readString(inp) }
@@ -374,6 +451,58 @@ object ChunkCodec {
         require(n >= 0) { "negative element count $n — the stream is corrupt" }
         return n
     }
+
+    // ---- json schema ------------------------------------------------------------------------------
+
+    /**
+     * One [JsonSchema.Shape], recursively.
+     *
+     * Its own tag space rather than more [writeValue] tags: a shape is a TYPE description and never a
+     * value, so the two cannot appear where the other is expected and sharing a numbering would only make
+     * both harder to read.
+     */
+    private fun writeShape(out: DataOutputStream, shape: JsonSchema.Shape) {
+        when (shape) {
+            is JsonSchema.Shape.Raw -> out.writeByte(S_RAW)
+            is JsonSchema.Shape.Anything -> out.writeByte(S_ANYTHING)
+            is JsonSchema.Shape.Scalar -> { out.writeByte(S_SCALAR); writeString(out, shape.kind.name) }
+            is JsonSchema.Shape.ListOf -> { out.writeByte(S_LIST); writeShape(out, shape.element) }
+            is JsonSchema.Shape.MapOf -> { out.writeByte(S_MAP); writeShape(out, shape.value) }
+            is JsonSchema.Shape.Choice -> {
+                out.writeByte(S_CHOICE)
+                writeString(out, shape.type)
+                out.writeInt(shape.members.size)
+                for (m in shape.members) writeString(out, m)
+            }
+            is JsonSchema.Shape.Ref -> { out.writeByte(S_REF); writeString(out, shape.type) }
+            is JsonSchema.Shape.Record -> {
+                out.writeByte(S_RECORD)
+                writeString(out, shape.type)
+                out.writeInt(shape.fields.size)
+                for (f in shape.fields) {
+                    writeString(out, f.name); writeString(out, f.key); writeShape(out, f.shape)
+                }
+            }
+            is JsonSchema.Shape.Optional -> { out.writeByte(S_OPTIONAL); writeShape(out, shape.of) }
+        }
+    }
+
+    private fun readShape(inp: DataInputStream): JsonSchema.Shape =
+        when (val tag = inp.readByte().toInt()) {
+            S_RAW -> JsonSchema.Shape.Raw
+            S_ANYTHING -> JsonSchema.Shape.Anything
+            S_SCALAR -> JsonSchema.Shape.Scalar(JsonSchema.Kind.valueOf(readString(inp)))
+            S_LIST -> JsonSchema.Shape.ListOf(readShape(inp))
+            S_MAP -> JsonSchema.Shape.MapOf(readShape(inp))
+            S_CHOICE -> JsonSchema.Shape.Choice(readString(inp), List(count(inp)) { readString(inp) })
+            S_REF -> JsonSchema.Shape.Ref(readString(inp))
+            S_RECORD -> JsonSchema.Shape.Record(
+                readString(inp),
+                List(count(inp)) { JsonSchema.Field(readString(inp), readString(inp), readShape(inp)) },
+            )
+            S_OPTIONAL -> JsonSchema.Shape.Optional(readShape(inp))
+            else -> throw IllegalStateException("unknown shape tag $tag in a compiled program")
+        }
 
     // ---- primitives -------------------------------------------------------------------------------
 

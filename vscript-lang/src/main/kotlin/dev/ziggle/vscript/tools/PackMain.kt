@@ -1,5 +1,6 @@
 package dev.ziggle.vscript.tools
 
+import dev.ziggle.vscript.model.ModuleNames
 import dev.ziggle.vscript.text.TextFrontEnd
 import dev.ziggle.vscript.text.VsPackFile
 import dev.ziggle.vscript.text.natives
@@ -65,8 +66,12 @@ object PackMain {
         val source = FolderSource(roots, stubs.associate { FolderSource.stub(it) })
         // Nothing declared means "check the whole tree" — the useful default for a `check` task, and the
         // only way a corpus with no packs yet gets any gate at all.
+        //
+        // Over `documents`, NOT `refs`: a document answers to several references (its path, its declared
+        // name, its folder when it is a barrel), so walking those compiles each file two or three times
+        // and reports every error as many. The count it produces is not just noisy, it is unactionable.
         val targets = packs.ifEmpty {
-            source.refs.sorted().map { Pack(it, "0.0.0", it) }
+            source.documents.keys.sorted().map { Pack(it, "0.0.0", it) }
         }
 
         var failed = 0
@@ -79,7 +84,12 @@ object PackMain {
                 continue
             }
             val front = TextFrontEnd(catalog.natives(), imports = source, rootRef = p.entry)
-            val compiled = front.compile(text)
+            // **A `_test` document compiles through a different door.** It is granted access to the
+            // internals of the module it tests — that is the whole point of the suffix — so compiling one
+            // as an ordinary document reports every private function it exercises as "no function called".
+            // Which reads as a broken test suite and is nothing of the kind.
+            val compiled =
+                if (ModuleNames.isTestRef(p.entry)) front.compileTests(text) else front.compile(text)
             if (!compiled.ok) {
                 compiled.errors.forEach { System.err.println("${p.entry}:${it.span.line}: ${it.message}") }
                 failed++
@@ -92,8 +102,24 @@ object PackMain {
             val bytes = VsPackFile.write(compiled, p.id, p.version, p.entry, strip)
             val file = File(out, "${p.id.replace('/', '-')}-${p.version}.vspack")
             file.writeBytes(bytes)
-            val needs = VsPackFile.readInfo(bytes).requiredHosts.size
-            println("packed ${p.id} ${p.version} -> ${file.name} (${bytes.size} bytes, $needs host verbs)")
+
+            // **Read back what was actually written, from the file.** A build tool that only ever encodes
+            // is a build tool that finds out its encoder is wrong on somebody else's machine. This decodes
+            // the bytes off disk and re-derives the host set from the bytecode, so a pack that cannot be
+            // read, or whose manifest disagrees with its program, fails HERE rather than at install time.
+            // It costs one decode of something already in the page cache.
+            val (info, back) = try {
+                VsPackFile.read(file.readBytes())
+            } catch (e: Exception) {
+                System.err.println("${p.entry}: wrote a pack that cannot be read back — ${e.message}")
+                failed++
+                continue
+            }
+            println(
+                "packed ${info.id} ${info.version} -> ${file.name} " +
+                    "(${bytes.size} bytes, ${info.requiredHosts.size} host verbs, " +
+                    "${back.functions.size} functions, ${back.entries.values.sumOf { it.size }} handlers)"
+            )
         }
 
         if (failed > 0) {

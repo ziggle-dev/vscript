@@ -57,6 +57,25 @@ class FolderSource(
     /** Which file a reference resolves to — for a tool that wants to report a path. */
     fun fileOf(ref: String): File? = index[ref]
 
+    /**
+     * One reference per DOCUMENT — what to iterate when the job is "every document, once".
+     *
+     * [refs] is deliberately not that: a document answers to its path, its declared name and possibly its
+     * folder, so walking it compiles the same file two or three times and reports every error as many
+     * times. A checker doing that says "79 of 227 failed" about a tree of a hundred files, which is not
+     * only noise — it is a number nobody can act on.
+     *
+     * The canonical name is the folder for a barrel and the most specific name otherwise, matching what
+     * `DocumentSource` calls a document when it has to name one.
+     */
+    val documents: Map<String, File> by lazy {
+        val seen = LinkedHashMap<String, File>()
+        val byFile = LinkedHashMap<File, String>()
+        for ((ref, f) in index) byFile.putIfAbsent(f, ref)
+        for ((f, ref) in byFile) seen[ref] = f
+        seen
+    }
+
     private val index: Map<String, File> by lazy {
         val names = LinkedHashMap<String, File>()
         val barrels = ArrayList<Pair<String, File>>()
