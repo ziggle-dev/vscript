@@ -54,6 +54,31 @@ subprojects {
         }
     }
 
+    /*
+     * Publish into a plain Maven tree under `build/maven-repo`, which the release workflow pushes to the
+     * `maven` branch of THIS repo.
+     *
+     * **This repo is public, so that tree is readable with no credentials** — a consumer adds one URL and
+     * resolves `dev.ziggle:*` anonymously. That is the whole reason to serve it from here rather than from
+     * a private mirror: no token to hand out, no account to have.
+     *
+     * There was a real bug waiting behind the absence of this. Every module already declared publications
+     * but nothing declared a repository, so `publish` had nowhere to go and only `publishToMavenLocal`
+     * worked — which is why `io.osrsx:osrsx-nodes` ships a POM depending on `dev.ziggle:vscript:1.2.0`
+     * that resolves from nowhere. osrsx-client never noticed because it composes this build in and
+     * substitutes the module; anyone else consuming the SDK could not build at all.
+     */
+    plugins.withId('maven-publish') {
+        publishing {
+            repositories {
+                maven {
+                    name = 'rawRepo'
+                    url = rootProject.layout.buildDirectory.dir('maven-repo')
+                }
+            }
+        }
+    }
+
     if (rootProject.hasProperty('outDir')) {
         layout.buildDirectory = file(rootProject.property('outDir'))
     }

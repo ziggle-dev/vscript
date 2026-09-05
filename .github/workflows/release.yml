@@ -1,0 +1,128 @@
+name: release
+
+# Cut a release of the language: a Maven tree anyone can resolve, and a GitHub Release humans can read.
+#
+# **Two artefacts, because they answer different questions.**
+#
+#  - The `maven` BRANCH is what Gradle resolves. This repo is public, so raw.githubusercontent serves that
+#    tree with no credentials — a consumer adds one URL and is done. No token to hand out, no account to
+#    have, and no third-party registry to publish through.
+#  - The GitHub RELEASE is what a person looks at: the jars, attached, under a tag, with notes.
+#
+# A release asset is deliberately NOT the resolution mechanism. Gradle wants a Maven layout with POMs so
+# transitive dependencies resolve; release assets are flat files with no metadata, and consuming them means
+# every consumer re-declaring this build's dependencies by hand.
+#
+# Everything runs on the repo's own GITHUB_TOKEN — the branch push and the release are both same-repo
+# operations covered by `contents: write`. No PAT.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Build and check the tree, but publish nothing.
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+
+      # The version is the build's, not an input. One place decides what this release is called, and it is
+      # the same place the artifacts get their coordinates from — an input could disagree with them.
+      - name: Read the version
+        id: v
+        run: |
+          v=$(grep -m1 "^    version = '" build.gradle | sed -E "s/.*version = '([^']+)'.*/\1/")
+          test -n "$v" || { echo "::error::could not read the version out of build.gradle"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "releasing $v"
+
+      # Refuse to overwrite a published version. A consumer that already resolved 1.2.0 must keep getting
+      # the same bytes; bump the version to release.
+      - name: Guard — the version must be new
+        id: check
+        run: |
+          url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/maven/dev/ziggle/vscript/${{ steps.v.outputs.version }}/vscript-${{ steps.v.outputs.version }}.pom"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+          case "$code" in
+            404) echo "v${{ steps.v.outputs.version }} is new" ;;
+            200) echo "::error::v${{ steps.v.outputs.version }} is already published — bump the version in build.gradle."; exit 1 ;;
+            *)   echo "::error::could not check the maven branch (HTTP $code)"; exit 1 ;;
+          esac
+
+      # The gate. A language that ships a broken parser breaks every consumer at once, so the whole suite
+      # runs before anything is published — not after, and not on a subset.
+      - name: Test
+        run: ./gradlew test --no-daemon --console=plain
+
+      - name: Build the Maven tree
+        run: ./gradlew publish --no-daemon --console=plain
+
+      - name: Summarise what was built
+        run: |
+          echo "### dev.ziggle ${{ steps.v.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          find build/maven-repo -name '*.pom' | sed 's|build/maven-repo/||' | sort \
+            | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Push the Maven tree to the `maven` branch
+        if: ${{ !inputs.dry-run }}
+        run: |
+          set -e
+          # The branch may not exist yet. An ORPHAN, because it shares no history with main and never
+          # should — it is a published artifact store, not a view of the source.
+          git clone --depth 1 --branch maven \
+            "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" mavenrepo 2>/dev/null || {
+            echo "no maven branch yet — creating it"
+            git clone --depth 1 "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}" mavenrepo
+            cd mavenrepo && git checkout --orphan maven && git rm -rf . >/dev/null && cd ..
+          }
+          # Additive: a new version directory is added, every existing one is left exactly as it was.
+          rsync -a --exclude '.git' build/maven-repo/ mavenrepo/
+          cd mavenrepo
+          git config user.name "vscript-bot"
+          git config user.email "bot@ziggle.dev"
+          git add -A
+          if git diff --cached --quiet; then echo "nothing to publish"; exit 0; fi
+          git commit -m "publish dev.ziggle ${{ steps.v.outputs.version }}"
+          git push origin maven
+
+      - name: Cut the GitHub Release
+        if: ${{ !inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir -p release-jars
+          # The module jars only — not sources, not the POMs, which are the maven branch's job.
+          find build/maven-repo -name '*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' \
+            -exec cp {} release-jars/ \;
+          gh release create "v${{ steps.v.outputs.version }}" release-jars/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "vscript ${{ steps.v.outputs.version }}" \
+            --notes "The vs language, ${{ steps.v.outputs.version }}.
+
+          Gradle resolves this from the \`maven\` branch — no credentials, the repo is public:
+
+          \`\`\`gradle
+          repositories {
+              maven { url 'https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/maven/' }
+          }
+          dependencies {
+              implementation 'dev.ziggle:vscript:${{ steps.v.outputs.version }}'
+          }
+          \`\`\`
+
+          The jars attached here are for reading and for a build that would rather vendor them."

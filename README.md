@@ -38,7 +38,34 @@ language picks up an import from a host's own packages.
 ./gradlew :vscript-shell:run   # the standalone editor
 ```
 
-JDK 21. There are no published artifacts yet; consume it with `includeBuild` or a composite build.
+JDK 21 to develop on; the modules target 17.
+
+## Consuming it
+
+Releases are published to the **`maven` branch of this repository**. It is public, so the tree is served
+over `raw.githubusercontent` with **no credentials** — no token, no account, no third-party registry:
+
+```gradle
+repositories {
+    mavenCentral()
+    maven { url 'https://raw.githubusercontent.com/ziggle-dev/vscript/maven/' }
+}
+dependencies {
+    implementation 'dev.ziggle:vscript:1.2.0'
+}
+```
+
+The modules are `vscript` (the language itself, from `:vscript-lang`), `vscript-ui`, `vscript-runtime`,
+`vscript-runview`, `editor-host`, `editor-graph`, `editor-text` and `vscript-shell`. `gson` is `compileOnly`
+here and is the consumer's to supply — deliberately, so nothing is forced onto a runtime classpath that
+already has one.
+
+Each release is also a [GitHub Release](../../releases) with the jars attached, for reading or vendoring.
+`.github/workflows/release.yml` cuts both.
+
+Working ON the language rather than with it? `includeBuild` a checkout and skip releases entirely — that is
+what osrsx-client, osrsx-sdk and osrsx-scripts all do, so an edit to the lexer reaches them with no publish
+step and no version bump.
 
 ## The language
 
