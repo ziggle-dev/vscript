@@ -90,6 +90,17 @@ subprojects {
     // One number for the repo rather than one per module: they are released together and a consumer
     // pinning three versions that must match is a consumer with three ways to get it wrong.
     //
+    // 1.4.0: MINOR -- a pack can be INSTALLED and run, which is the last thing between a `.vspack` and a
+    // client that runs one. `runtime.PackStore` is the folder of them (beside the documents, not among
+    // them -- a `.vspack` answers to no import reference and has no business in a tree every index walks),
+    // and `graph pack list | info <id> | run <id>` drives it over the same socket as everything else.
+    //
+    // Headers are read; programs are not. Listing is something a UI does on every refresh, and decoding a
+    // program to print a name would mean reading nineteen hundred functions to answer it.
+    //
+    // `ScriptRuntime.hostNames` is public so a caller can ask "would this run here" before there is
+    // anything to refuse -- `pack info` answers it, and `pack run` refuses on the same comparison.
+    //
     // 1.3.1: PATCH -- the codec and the checker, corrected against a real corpus of 117 documents. Every
     // one of these was found by packing that corpus, not by reasoning about the code.
     //
@@ -133,5 +144,5 @@ subprojects {
     // document decodes straight into `LIST<T>` / `MAP<STRING, T>` instead of needing a record declared to
     // wrap it in. Both are additive: the clock defaults to the system one, and a target with arguments
     // used to be a parse error, so nothing that compiled before compiles differently now.
-    version = '1.3.1'
+    version = '1.4.0'
 }

@@ -166,6 +166,15 @@ class ScriptRuntime(
      */
     private val vmClock = dev.ziggle.vscript.host.Clock { clock.nowMs() }
 
+    /**
+     * Every verb this host offers, by name — what a pack's `requiredHosts` is checked against.
+     *
+     * Exposed so a caller can ask "would this run here" WITHOUT starting it: `runPack` refuses on the same
+     * comparison, but a listing or an install-time gate wants the answer before there is anything to
+     * refuse.
+     */
+    val hostNames: Set<String> get() = hosts.names
+
     /** The clock a parked fiber's wake time is measured against — see `DebugSession.Context`. */
     internal fun nowMs(): Long = vmClock.nowMs()
 

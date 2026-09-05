@@ -187,6 +187,9 @@ class VScriptControl(private val panel: ScriptsPanel) {
                 }
             }
             "call" -> call(args)
+
+            // ---- shipped packs
+            "pack" -> pack(args)
             "stop" -> { panel.runtime.stop(); ok("running" to false) }
             "sleep" -> sleep(args)
             "wake" -> {
@@ -1510,6 +1513,88 @@ class VScriptControl(private val panel: ScriptsPanel) {
      * `type` overwrote it — `graph add movement.walkTo` replied `{"type":"movement.walkTo"}`, which reads as a
      * different kind of message entirely to anything routing on that field.
      */
+
+    /**
+     * `.vspack` files — a script that arrived as bytecode rather than as source.
+     *
+     *   pack               what is installed
+     *   pack info <id>     one pack's header, including every verb it needs
+     *   pack run <id>      run it
+     *
+     * **A pack is not a document and this is not `open`.** There is no source to show, no canvas to draw
+     * and nothing to edit, so it deliberately does not touch the panel's open document — running one leaves
+     * whatever you were editing exactly where it was.
+     */
+    private fun pack(args: List<String>): JsonObject {
+        val store = dev.ziggle.vscript.runtime.PackStore()
+        return when (val verb = args.firstOrNull() ?: "list") {
+            "list" -> {
+                val installed = store.installed()
+                ok(
+                    "root" to store.root.absolutePath,
+                    "packs" to installed.map {
+                        mapOf(
+                            "id" to it.id,
+                            "version" to it.info.version,
+                            "entry" to it.info.entry,
+                            "needs" to it.info.requiredHosts.size,
+                            "file" to it.file.name,
+                        )
+                    },
+                    // Reported rather than swallowed: one unreadable file must not make the rest invisible.
+                    "unreadable" to store.problems(),
+                )
+            }
+
+            "info" -> {
+                val id = args.getOrNull(1) ?: return fail("usage: graph pack info <id>")
+                val found = store.find(id) ?: return fail(notInstalled(id, store))
+                val missing = found.info.requiredHosts - panel.runtime.hostNames
+                ok(
+                    "id" to found.id,
+                    "version" to found.info.version,
+                    "entry" to found.info.entry,
+                    "stripped" to found.info.stripped,
+                    "builtAtMs" to found.info.builtAtMs,
+                    "requires" to found.info.requiredHosts.sorted(),
+                    // The compatibility answer, up front — this is what `pack run` would refuse on.
+                    "missing" to missing.sorted(),
+                    "runnable" to missing.isEmpty(),
+                    "meta" to found.info.meta,
+                )
+            }
+
+            "run" -> {
+                val id = args.getOrNull(1) ?: return fail("usage: graph pack run <id>")
+                val loaded = try {
+                    store.load(id) ?: return fail(notInstalled(id, store))
+                } catch (e: Exception) {
+                    // A manifest disagreeing with its program lands here, and saying so beats "could not run".
+                    return fail("'$id' could not be read: ${e.message}")
+                }
+                val (info, compiled) = loaded
+                val err = panel.runtime.runPack(compiled, id = id, name = info.id)
+                if (err != null) fail(err)
+                else ok(
+                    "running" to true,
+                    "id" to info.id,
+                    "version" to info.version,
+                    // Said plainly rather than left to be discovered: a pack carries no Sites, so nothing
+                    // maps a fault to a line and no breakpoint can arm.
+                    "debuggable" to false,
+                )
+            }
+
+            else -> fail("unknown pack verb '$verb' — list | info <id> | run <id>")
+        }
+    }
+
+    private fun notInstalled(id: String, store: dev.ziggle.vscript.runtime.PackStore): String {
+        val have = store.installed().map { it.id }
+        return "no pack '$id' in ${store.root.absolutePath}" +
+            if (have.isEmpty()) " (nothing installed)" else " — installed: ${have.joinToString()}"
+    }
+
     private fun ok(vararg pairs: Pair<String, Any?>): JsonObject = JsonObject().apply {
         for ((k, v) in pairs) add(k, jsonOf(v))
         addProperty("type", TYPE)
