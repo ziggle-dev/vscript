@@ -1,0 +1,130 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.ziggle",
+    "module": "editor-host",
+    "version": "1.2.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.6.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-ui",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "editor-host-1.2.0.jar",
+          "url": "editor-host-1.2.0.jar",
+          "size": 20770,
+          "sha512": "79ba2e2e4e7149fd4adce67e131e3595fba3e739d47d2ef77ebf63728e456b960a13b5c7560ad2eb52fbc6865a5083cd69fbfc39875189d903ef11e539332f66",
+          "sha256": "6c6b735883e2f0c00c30ea904ba60970deea4fa6513e6fa37e12870bc54dbae0",
+          "sha1": "e1d96912a73663b406ce29c10a0abd183fa498d9",
+          "md5": "2da4b469d31249cf7c0f1c8c7560080f"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-ui",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "editor-host-1.2.0.jar",
+          "url": "editor-host-1.2.0.jar",
+          "size": 20770,
+          "sha512": "79ba2e2e4e7149fd4adce67e131e3595fba3e739d47d2ef77ebf63728e456b960a13b5c7560ad2eb52fbc6865a5083cd69fbfc39875189d903ef11e539332f66",
+          "sha256": "6c6b735883e2f0c00c30ea904ba60970deea4fa6513e6fa37e12870bc54dbae0",
+          "sha1": "e1d96912a73663b406ce29c10a0abd183fa498d9",
+          "md5": "2da4b469d31249cf7c0f1c8c7560080f"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "editor-host-1.2.0-sources.jar",
+          "url": "editor-host-1.2.0-sources.jar",
+          "size": 9103,
+          "sha512": "33b4f956e965ca3f4e9044042255f9c3ec95c7ce4e603e0375ab6b328b96db7d7f998b7db0c3254787b92dcfdd8ad0a50f36d3aef73888ac00f59363a3e1c45c",
+          "sha256": "ecbaf4d34ac8c9ae1ca17f610392af46fc9d82e236f8b71d36f5aec444ce7f55",
+          "sha1": "ef38e8f92f218c0a4405ebf5ff5374a659464bae",
+          "md5": "a16def0e25950fca555223b6396e40a9"
+        }
+      ]
+    }
+  ]
+}

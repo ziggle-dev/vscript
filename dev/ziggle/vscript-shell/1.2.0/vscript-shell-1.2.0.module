@@ -1,0 +1,130 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.ziggle",
+    "module": "vscript-shell",
+    "version": "1.2.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.6.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "editor-graph",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "editor-text",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-shell-1.2.0.jar",
+          "url": "vscript-shell-1.2.0.jar",
+          "size": 131591,
+          "sha512": "3849544ca91537aa3eac7904007bf47887b3701ffc31a9143e1dfef1dafafcc2f12f48adc2d2a104989fcde956f50a6d0f0edd1b1895ac3b485bbbc2c77ea443",
+          "sha256": "cff3f204901591605440dffb45a22aea435bcf19c9f2ca84e9b7b25d0b20827d",
+          "sha1": "c83ded836a5389162af749d0dc2a898cfe9fe2ca",
+          "md5": "713ee1c2fe99651392d9c6b211e51016"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "editor-graph",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "editor-text",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-shell-1.2.0.jar",
+          "url": "vscript-shell-1.2.0.jar",
+          "size": 131591,
+          "sha512": "3849544ca91537aa3eac7904007bf47887b3701ffc31a9143e1dfef1dafafcc2f12f48adc2d2a104989fcde956f50a6d0f0edd1b1895ac3b485bbbc2c77ea443",
+          "sha256": "cff3f204901591605440dffb45a22aea435bcf19c9f2ca84e9b7b25d0b20827d",
+          "sha1": "c83ded836a5389162af749d0dc2a898cfe9fe2ca",
+          "md5": "713ee1c2fe99651392d9c6b211e51016"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "vscript-shell-1.2.0-sources.jar",
+          "url": "vscript-shell-1.2.0-sources.jar",
+          "size": 68272,
+          "sha512": "d5037862be0163dde6894e6da3d6fb826a7e2813b11955531509a4afcdd3e97ce643aa8626001757a1b1c9737d0d9be4acfe767946c28d0c864c4005af4d621a",
+          "sha256": "f085dbb153a3f03d6ac02fefda42828d5ce470cf0a9ed9de0acc80df77a3e8fd",
+          "sha1": "9d3e2e96b7d6c509e4dedbe28eeef86071422a62",
+          "md5": "767b0e75ef809f0c5d68ac97094ce652"
+        }
+      ]
+    }
+  ]
+}

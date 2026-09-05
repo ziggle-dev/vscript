@@ -1,0 +1,144 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.ziggle",
+    "module": "editor-graph",
+    "version": "1.2.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.6.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-runtime",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-runview",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "editor-host",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "editor-graph-1.2.0.jar",
+          "url": "editor-graph-1.2.0.jar",
+          "size": 292654,
+          "sha512": "a0443dffc40abed514fc826d3db115157b1700fd0f00a8cefe312a5161e550a5918310b31e9c25fc16d504ab238d316b37f89fcbc3fe770b022914494d84c876",
+          "sha256": "3d38a08c2995887446b5dfd9e33540f67aa4bc9e6c3cea30411bd3444f71f0ce",
+          "sha1": "1a6c0ac42fecd51576571f7cf3a9c54b404ad6d7",
+          "md5": "2454d3fb120f96f843eba37192407142"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-runtime",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-runview",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "editor-host",
+          "version": {
+            "requires": "1.2.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "editor-graph-1.2.0.jar",
+          "url": "editor-graph-1.2.0.jar",
+          "size": 292654,
+          "sha512": "a0443dffc40abed514fc826d3db115157b1700fd0f00a8cefe312a5161e550a5918310b31e9c25fc16d504ab238d316b37f89fcbc3fe770b022914494d84c876",
+          "sha256": "3d38a08c2995887446b5dfd9e33540f67aa4bc9e6c3cea30411bd3444f71f0ce",
+          "sha1": "1a6c0ac42fecd51576571f7cf3a9c54b404ad6d7",
+          "md5": "2454d3fb120f96f843eba37192407142"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "editor-graph-1.2.0-sources.jar",
+          "url": "editor-graph-1.2.0-sources.jar",
+          "size": 149335,
+          "sha512": "634cb365c90d0faf06964f10d79c6e120ac8946c07f952590b87b6caa997121b8c7204f9ae182c6dae86f86c4396f58addd720a872b374ced9c2924ad3e3123e",
+          "sha256": "5fd90170cbdbebc3e6278b91b916e68b09005a08b8ce127eb1cecc346ab05870",
+          "sha1": "975c3bdb370fd92763f833107e6a4ad992c94d0e",
+          "md5": "04efb6ed6488b9423ca0df1eee7436c6"
+        }
+      ]
+    }
+  ]
+}
