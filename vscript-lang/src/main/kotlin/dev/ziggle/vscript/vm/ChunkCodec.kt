@@ -56,7 +56,26 @@ class ProgramImage(
      * the reader hands back the same instances rather than copies.
      */
     val roots: List<Chunk>,
-)
+) {
+    /**
+     * Every host function this program will ask for, by name.
+     *
+     * **This is the compatibility question, answered exactly.** A program is portable across hosts because
+     * [HostRegistry.bind] resolves by name — so "will this run here" is not a version comparison, it is
+     * whether the host has these. A caller can therefore refuse a program *before* spawning anything and
+     * say which verb is missing, instead of discovering it at whatever instruction happens to reach the
+     * gap. Compare against [HostRegistry.names].
+     *
+     * Both tiers are walked: a call can be emitted in a function nothing else names, and an entry that is
+     * not in the table has host names of its own.
+     */
+    fun requiredHosts(): Set<String> {
+        val out = LinkedHashSet<String>()
+        for (c in functions) out += c.hostNames
+        for (c in roots) out += c.hostNames
+        return out
+    }
+}
 
 /**
  * Reads and writes [ProgramImage] as a self-describing byte stream.
@@ -154,6 +173,30 @@ object ChunkCodec {
         for (c in all) c.program = functions
 
         return ProgramImage(functions, rootIdx.map { all[it] })
+    }
+
+    // ---- values, for a container format ------------------------------------------------------------
+
+    /**
+     * A standalone list of values, for a format that carries some ALONGSIDE a program.
+     *
+     * A pack has to record the run's starting globals, which are values of exactly the kind a constant pool
+     * holds; without this, a container would either re-implement the tagging (two encodings to keep in
+     * step) or smuggle them through a fake chunk. Length-prefixed blob rather than a shared stream, so the
+     * container owns its own framing and this owns its own.
+     */
+    fun encodeValues(values: List<Any?>): ByteArray {
+        val bytes = ByteArrayOutputStream(64)
+        val out = DataOutputStream(bytes)
+        out.writeInt(values.size)
+        for (v in values) writeValue(out, v)
+        out.flush()
+        return bytes.toByteArray()
+    }
+
+    fun decodeValues(bytes: ByteArray): List<Any?> {
+        val inp = DataInputStream(ByteArrayInputStream(bytes))
+        return List(count(inp)) { readValue(inp) }
     }
 
     // ---- chunk ------------------------------------------------------------------------------------
