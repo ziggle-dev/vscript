@@ -53,5 +53,24 @@ class RunEntry(
             documentName = entry.name,
             isRoot = entry.isRoot,
         )
+
+        /**
+         * A SHIPPED entry — one read back out of a compiled pack, with no compiler behind it.
+         *
+         * The same five fields, which is the point: this class was already the runtime's answer to "an
+         * entry is not a graph node", and a pack entry is the third front end to arrive at exactly that
+         * shape. Nothing downstream of here can tell where an entry came from, so a pack runs through the
+         * same phase machine, the same wake-before-work rule and the same handler groups as anything else.
+         *
+         * [PackEntry.site] is -1 in a stripped pack, which the runtime already treats as "anchored to
+         * nothing" — the graph path uses -1 for the same thing.
+         */
+        fun of(entry: dev.ziggle.vscript.text.PackEntry): RunEntry = RunEntry(
+            chunk = entry.chunk,
+            site = entry.site,
+            documentId = entry.document,
+            documentName = entry.name,
+            isRoot = entry.isRoot,
+        )
     }
 }

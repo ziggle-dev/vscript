@@ -35,7 +35,13 @@ import dev.ziggle.vscript.vm.TraceKind
  */
 class ScriptRuntime(
     val catalog: NodeCatalog,
-    hosts: HostRegistry,
+    /**
+     * Kept as a property, not just handed to the interpreter, so a run can be REFUSED before it starts.
+     *
+     * `runPack` asks it what verbs exist and compares that against what the pack calls. Everything else
+     * here only ever needed the registry to build the interpreter with.
+     */
+    private val hosts: HostRegistry,
     clock: Clock = SystemClock,
     private val actuator: ActuatorSink? = null,
     /**
@@ -948,6 +954,72 @@ class ScriptRuntime(
             begin(group(dev.ziggle.vscript.lang.EntryKind.START), name)
         } catch (e: Throwable) {
             EditorLog.e(TAG, "starting '$name' failed", e)
+            log.add(LogLevel.ERROR, "could not start: ${e.message}", graphId = graphId)
+            log.endRun()
+            "could not start: ${e.message}"
+        }
+    }
+
+    /**
+     * Run a COMPILED PACK — a script that arrived as bytecode, with no source and no compiler.
+     *
+     * The counterpart of [runText] for something shipped rather than authored here. Everything after the
+     * two differences below is [begin], shared with both other front ends: same phase machine, same
+     * wake-before-work rule, same handler groups. A pack's entries reach it through `RunEntry.of`, which
+     * is where the three front ends already meet.
+     *
+     * **It is checked against this host FIRST, and that is the whole compatibility story.** A pack names
+     * the verbs it calls, and this host either has them or does not — a question with an answer, unlike
+     * "was this built against a compatible version". Asked here rather than left to
+     * `HostRegistry.bind`, which raises at the moment a chunk is spawned: by then a run has started, some
+     * handlers may already be going, and the message names one function rather than the set. Refusing up
+     * front costs one set subtraction and turns "it died halfway through" into "this client is missing
+     * these two verbs".
+     *
+     * **A pack is not debuggable, and says so rather than pretending.** `Sites` is what maps a site id to a
+     * line, and a pack never carries one — so there are no spans to publish, breakpoints have nothing to
+     * arm against, and this starts the run as a release build whatever the pack was compiled with.
+     *
+     * @param id what the console and the breakpoint sidecar key this script by.
+     * @param name what its fibers are called.
+     * @return an error message, or null when the run started.
+     */
+    fun runPack(
+        pack: dev.ziggle.vscript.text.CompiledPack,
+        id: String,
+        name: String,
+        resume: Boolean = false,
+    ): String? {
+        val missing = pack.requiredHosts() - hosts.names
+        if (missing.isNotEmpty()) {
+            val what = missing.sorted().joinToString(", ")
+            EditorLog.e(TAG, "refusing '$name': host is missing $what")
+            resetForRun(id, debug = false, resume)
+            log.add(LogLevel.ERROR, "this client cannot run '$name': it provides no $what", graphId = graphId)
+            log.endRun()
+            return "missing host function(s): $what"
+        }
+
+        resetForRun(id, debug = false, resume)
+        // No Sites, so nothing anchors to a line. Cleared rather than left holding whatever the previous
+        // run published, which would render this run's complaints against another document's source.
+        textSpans = null
+        textSites = null
+
+        return try {
+            // Sized for the whole closure before anything can read a slot — the pack carries the run's
+            // starting values for every document in it, exactly as a compilation does.
+            interpreter.resetGlobals(pack.globals)
+            fun group(kind: dev.ziggle.vscript.lang.EntryKind) =
+                pack.entries[kind].orEmpty().map { RunEntry.of(it) }
+            stopChunks = group(dev.ziggle.vscript.lang.EntryKind.STOP)
+            renderChunks = group(dev.ziggle.vscript.lang.EntryKind.RENDER)
+            tickChunks = group(dev.ziggle.vscript.lang.EntryKind.TICK)
+            wakeChunks = group(dev.ziggle.vscript.lang.EntryKind.WAKE)
+            sleepChunks = group(dev.ziggle.vscript.lang.EntryKind.SLEEP)
+            begin(group(dev.ziggle.vscript.lang.EntryKind.START), name)
+        } catch (e: Throwable) {
+            EditorLog.e(TAG, "starting packed '$name' failed", e)
             log.add(LogLevel.ERROR, "could not start: ${e.message}", graphId = graphId)
             log.endRun()
             "could not start: ${e.message}"
