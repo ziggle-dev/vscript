@@ -1,0 +1,116 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.ziggle",
+    "module": "vscript-runtime",
+    "version": "1.3.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.6.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript",
+          "version": {
+            "requires": "1.3.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-runtime-1.3.0.jar",
+          "url": "vscript-runtime-1.3.0.jar",
+          "size": 120544,
+          "sha512": "343d2f9fadb4e0fb655a5bea1512acb56928373f836b99e4609f6ac1d507a3d53e14209ac257d4b3f2e31813688b0e8bb717ea755a440d87e688caae018e134a",
+          "sha256": "62a5281a520eb2bf14e21c2db383392dad0b3b0d1d0e1746c479a54692d173c1",
+          "sha1": "06704ab9cea9252aa9bbe37a85f7f0838c66480f",
+          "md5": "197eb7d07601fac17f71e21175117e80"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript",
+          "version": {
+            "requires": "1.3.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-runtime-1.3.0.jar",
+          "url": "vscript-runtime-1.3.0.jar",
+          "size": 120544,
+          "sha512": "343d2f9fadb4e0fb655a5bea1512acb56928373f836b99e4609f6ac1d507a3d53e14209ac257d4b3f2e31813688b0e8bb717ea755a440d87e688caae018e134a",
+          "sha256": "62a5281a520eb2bf14e21c2db383392dad0b3b0d1d0e1746c479a54692d173c1",
+          "sha1": "06704ab9cea9252aa9bbe37a85f7f0838c66480f",
+          "md5": "197eb7d07601fac17f71e21175117e80"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "vscript-runtime-1.3.0-sources.jar",
+          "url": "vscript-runtime-1.3.0-sources.jar",
+          "size": 54290,
+          "sha512": "f5b5f6d0e56970a8d2b15b44cfa833fc567ae0bce0271471931ba2e0f65c6827ba3f23e4b3cb0c387908500e420f3c0aba515bb31a844846432c002d118978c8",
+          "sha256": "0f3f2a0a7082681ae8d1144ff5611473242a14633ef6487185006056401d620d",
+          "sha1": "56b8683ecea6c44987bcf5af4ee676c21b2e655d",
+          "md5": "f7eb6f4d8d4824cd8fa17fb6a0940e06"
+        }
+      ]
+    }
+  ]
+}
