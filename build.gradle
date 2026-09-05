@@ -90,10 +90,30 @@ subprojects {
     // One number for the repo rather than one per module: they are released together and a consumer
     // pinning three versions that must match is a consumer with three ways to get it wrong.
     //
+    // 1.3.0: MINOR -- a compiled program can be WRITTEN DOWN, and there is a build tool for it. All
+    // additive; nothing that compiled before compiles differently.
+    //
+    // `vm.ChunkCodec` serialises a program to bytes and back, import closure and all -- TextFrontEnd
+    // already flattens a document and everything it imports into one shared function table, so an image is
+    // the whole closure or it is nothing. Portable because host calls resolve by NAME at load, never by a
+    // catalogue index. `write(strip = true)` drops what only an editor and a debugger read; `debug = false`
+    // does NOT do that on its own, which is worth knowing before shipping one.
+    //
+    // `text.CompiledPack` adds the entry table a runtime dispatches on, and `requiredHosts()` -- the
+    // compatibility question answered exactly, rather than by comparing versions. `text.VsPackFile` is the
+    // distributable `.vspack`: a manifest anyone can read beside bytecode it is verified against.
+    // `runtime.ScriptRuntime.runPack` runs one through the real phase machine, refusing up front when this
+    // host lacks a verb the pack calls.
+    //
+    // `tools.FolderSource` is the import root a build tool compiles against, with ModuleNames' rules --
+    // path, declared name, and the `mod.vs` front door. `tools.PackMain` is the worker behind the new
+    // `dev.ziggle.vscript` Gradle plugin (`:vscript-gradle`), which wires the repository and the language
+    // for a consumer and adds check/pack/editor tasks.
+    //
     // 1.2.0: MINOR -- five calendar verbs (`localDate`, `hourOfDay`, `minuteOfHour`, `dayOfWeek`,
     // `msUntilLocal`) on an injectable `java.time.Clock`, and `as` now keeps its type arguments so a
     // document decodes straight into `LIST<T>` / `MAP<STRING, T>` instead of needing a record declared to
     // wrap it in. Both are additive: the clock defaults to the system one, and a target with arguments
     // used to be a parse error, so nothing that compiled before compiles differently now.
-    version = '1.2.0'
+    version = '1.3.0'
 }

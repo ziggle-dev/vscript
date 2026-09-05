@@ -33,6 +33,11 @@ include 'editor-text'
 // dies at configuration time with "Project with path ':vscript-shell' not found in build ':vscript'".
 include 'vscript-shell'
 
+// The Gradle plugin (`dev.ziggle.vscript`). Lives in this repo rather than beside a consumer because it
+// defaults to THIS build's version — a plugin shipped from elsewhere would wire consumers to a language
+// version it was never tested against.
+include 'vscript-gradle'
+
 // the only one that was ever in its own repo, which cost it an `includeBuild`, a dependency substitution
 // and two paths traversing out of the checkout. It depends on `:vscript-lang` as a project now.
 //

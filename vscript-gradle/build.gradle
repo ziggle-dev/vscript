@@ -1,0 +1,75 @@
+// The Gradle plugin — `dev.ziggle.vscript`.
+//
+// It exists so that a project wanting the language does not have to know how this repo is laid out. Three
+// shapes of consumer, one plugin:
+//
+//   - a JVM app that just wants to RUN vs (raw text, a graph, or bytecode) — it needs the right modules on
+//     the classpath and nothing else;
+//   - a SCRIPTS repo — a tree of .vs documents with no Kotlin at all, which wants check/pack/publish tasks
+//     and an editor to open them in;
+//   - a HOST embedding the language — which wants both, plus its own catalogue wired into the tasks.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation gradleApi()
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+kotlin { jvmToolchain(17) }
+
+tasks.named('test') { useJUnitPlatform() }
+
+// The language version the plugin defaults its dependencies to is THIS build's version, generated in
+// rather than written twice. A plugin that shipped a stale default would wire consumers to a version it
+// was never tested against.
+def generatedDir = layout.buildDirectory.dir('generated/sources/version/kotlin')
+def pluginVersion = version.toString()
+tasks.register('generateVersion') {
+    inputs.property('version', pluginVersion)
+    outputs.dir(generatedDir)
+    doLast {
+        def pkg = new File(generatedDir.get().asFile, 'dev/ziggle/vscript/gradle')
+        pkg.mkdirs()
+        new File(pkg, 'PluginVersion.kt').text = """\
+package dev.ziggle.vscript.gradle
+
+/** Generated from the build. The language version this plugin defaults to. */
+internal const val VSCRIPT_VERSION = "${pluginVersion}"
+"""
+    }
+}
+sourceSets.main.kotlin.srcDir(generatedDir)
+tasks.named('compileKotlin') { dependsOn 'generateVersion' }
+
+gradlePlugin {
+    plugins {
+        vscript {
+            id = 'dev.ziggle.vscript'
+            implementationClass = 'dev.ziggle.vscript.gradle.VscriptPlugin'
+            displayName = 'vscript'
+            description = 'Build, check, pack and publish vs documents; or just put the language on the classpath.'
+        }
+    }
+}
+
+publishing {
+    publications {
+        // `java-gradle-plugin` adds the marker publication itself; this is the plugin's own jar.
+        maven(MavenPublication) {
+            from components.java
+            artifactId = 'vscript-gradle'
+            pom {
+                name = 'vscript-gradle'
+                description = 'Gradle plugin for the vs scripting language.'
+            }
+        }
+    }
+}
