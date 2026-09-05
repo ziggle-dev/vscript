@@ -1,0 +1,203 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.ziggle",
+    "module": "vscript",
+    "version": "1.4.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.6.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-1.4.0.jar",
+          "url": "vscript-1.4.0.jar",
+          "size": 1107139,
+          "sha512": "2201503b831d12334b3fef42eb551f6898236dc7ccc1795e2a3d3452670afc4cc0262242ece8388a184a4d019a670bc47b7c060acb5b2a2fbc81654f70b8b419",
+          "sha256": "b4430070905e8f71c3264298444a435b8a7184bc01373b2026c8c4c991beb609",
+          "sha1": "4612ca46659d679d827ed8148164ceda4fc6790c",
+          "md5": "66f996ecc069c2bc065739544f186e2c"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-1.4.0.jar",
+          "url": "vscript-1.4.0.jar",
+          "size": 1107139,
+          "sha512": "2201503b831d12334b3fef42eb551f6898236dc7ccc1795e2a3d3452670afc4cc0262242ece8388a184a4d019a670bc47b7c060acb5b2a2fbc81654f70b8b419",
+          "sha256": "b4430070905e8f71c3264298444a435b8a7184bc01373b2026c8c4c991beb609",
+          "sha1": "4612ca46659d679d827ed8148164ceda4fc6790c",
+          "md5": "66f996ecc069c2bc065739544f186e2c"
+        }
+      ]
+    },
+    {
+      "name": "testFixturesApiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript",
+          "version": {
+            "requires": "1.4.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-1.4.0-test-fixtures.jar",
+          "url": "vscript-1.4.0-test-fixtures.jar",
+          "size": 155939,
+          "sha512": "44fb4ffd87a144d9fb5acb92aa01b405eae52adb0c71d39d182b336800c2b054d7d751a26f42ea699f98546a73f653cbfc6f6241db402d7ebc7b0413375af74e",
+          "sha256": "e8b04b000b4512d373bb72b81a9b190bfdc4e5bda021d222479ea6c5eed9c2a5",
+          "sha1": "012c88d0aa795532f5a8d4ca50439df96445c67f",
+          "md5": "bb1117de72a368f9fdd69a0fce2fb0a9"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "dev.ziggle",
+          "name": "vscript-lang-test-fixtures",
+          "version": "1.4.0"
+        }
+      ]
+    },
+    {
+      "name": "testFixturesRuntimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-test-junit5"
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript",
+          "version": {
+            "requires": "1.4.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "dependencyConstraints": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-test-junit5",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-1.4.0-test-fixtures.jar",
+          "url": "vscript-1.4.0-test-fixtures.jar",
+          "size": 155939,
+          "sha512": "44fb4ffd87a144d9fb5acb92aa01b405eae52adb0c71d39d182b336800c2b054d7d751a26f42ea699f98546a73f653cbfc6f6241db402d7ebc7b0413375af74e",
+          "sha256": "e8b04b000b4512d373bb72b81a9b190bfdc4e5bda021d222479ea6c5eed9c2a5",
+          "sha1": "012c88d0aa795532f5a8d4ca50439df96445c67f",
+          "md5": "bb1117de72a368f9fdd69a0fce2fb0a9"
+        }
+      ],
+      "capabilities": [
+        {
+          "group": "dev.ziggle",
+          "name": "vscript-lang-test-fixtures",
+          "version": "1.4.0"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "vscript-1.4.0-sources.jar",
+          "url": "vscript-1.4.0-sources.jar",
+          "size": 551295,
+          "sha512": "b35c3d3c3c77fa336e5e5198b5243c43ec7eed8832c20877b0de125a0c9cf23985a379da91a59a84f4178377345bc8d1518ff4f908c33c332613d5e6fe1a1f21",
+          "sha256": "55c49c78a8899825af90aa09e384b9f9314de61dc4434d0e803689a80635dd01",
+          "sha1": "60a8ab6db06bb8ed1b260ed58326a394d8607691",
+          "md5": "26850a514adfc6f35405f81c6a1fcb78"
+        }
+      ]
+    }
+  ]
+}

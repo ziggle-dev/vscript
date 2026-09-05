@@ -1,0 +1,130 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "dev.ziggle",
+    "module": "vscript-runview",
+    "version": "1.4.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.6.1"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-runtime",
+          "version": {
+            "requires": "1.4.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-ui",
+          "version": {
+            "requires": "1.4.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-runview-1.4.0.jar",
+          "url": "vscript-runview-1.4.0.jar",
+          "size": 36722,
+          "sha512": "bf2222720396417b284897616a389c576dc71d76646362df20c4bfb56f6defa4ff22790ce501872496f26c97aacdf9840ba3bb30ab3c802556530390418b664d",
+          "sha256": "917b8fe3bffc1751de386b1f487da23fbd0dbde415c93ecfa70834ae14ab8c9f",
+          "sha1": "e047d97fb38eceab04e9c01ebeff5fbc6a440a94",
+          "md5": "c07bac0edf861028056666249d45c306"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-runtime",
+          "version": {
+            "requires": "1.4.0"
+          }
+        },
+        {
+          "group": "dev.ziggle",
+          "module": "vscript-ui",
+          "version": {
+            "requires": "1.4.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.3.21"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "vscript-runview-1.4.0.jar",
+          "url": "vscript-runview-1.4.0.jar",
+          "size": 36722,
+          "sha512": "bf2222720396417b284897616a389c576dc71d76646362df20c4bfb56f6defa4ff22790ce501872496f26c97aacdf9840ba3bb30ab3c802556530390418b664d",
+          "sha256": "917b8fe3bffc1751de386b1f487da23fbd0dbde415c93ecfa70834ae14ab8c9f",
+          "sha1": "e047d97fb38eceab04e9c01ebeff5fbc6a440a94",
+          "md5": "c07bac0edf861028056666249d45c306"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "vscript-runview-1.4.0-sources.jar",
+          "url": "vscript-runview-1.4.0-sources.jar",
+          "size": 14764,
+          "sha512": "6564a069eb5aa4834e74ffea3b1b48374e3dd23b6ad230ccfa9250df802863ce6095ed576952aff411c3590ad29bc1f20786ff6ce88e8e50dbf3d1578c741ab3",
+          "sha256": "501e4da0527948b6de3fc9267b185f2f483636977d5a1da3d30413a8a603bddd",
+          "sha1": "b0a15c90870860642d06d4753fb8de8488c5ce04",
+          "md5": "3f9646824c4f2f7f5ef231a10ad0be42"
+        }
+      ]
+    }
+  ]
+}
