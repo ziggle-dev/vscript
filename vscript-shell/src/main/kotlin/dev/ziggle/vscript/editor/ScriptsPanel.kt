@@ -167,6 +167,10 @@ class ScriptsPanel(
         // to read `EditorSettings` itself, which put it downstream of a preferences object that imports
         // the canvas and the run views — see [ScriptRuntime.traceRequested].
         it.traceRequested = { EditorSettings.traceExecution }
+        // How the domain calls back into a running script — see [ScriptDomain.runtimeReady]. Given here,
+        // once, because this is where the runtime is made and the domain is the only thing that knows
+        // what it wants to call.
+        domain.runtimeReady(ScriptDomain.Caller { fn, args -> it.call(fn, args) })
     }
 
     init {

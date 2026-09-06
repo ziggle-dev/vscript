@@ -66,6 +66,32 @@ interface ScriptDomain {
      */
     fun catalogueReady(catalog: NodeCatalog) {}
 
+    /**
+     * The runtime that will run this domain's scripts exists, and here is how to call into it.
+     *
+     * For a domain whose nodes take a **handler** — `fn(T)` — and have to call it back when something
+     * happens. The node keeps the function value; this is the thing that turns one into a running fiber.
+     * Called once, before any script has started.
+     *
+     * Handed as a [Caller] rather than as the runtime itself on purpose. A domain has no business
+     * driving a run — starting, stopping and stepping belong to whatever owns the panel — and the one
+     * capability it genuinely needs is this one. A narrow interface is also what keeps this seam
+     * game-agnostic: nothing here knows what an event is, only that somebody wants a function called.
+     */
+    fun runtimeReady(caller: Caller) {}
+
+    /** How a domain gets a function value the script gave it called. See [runtimeReady]. */
+    fun interface Caller {
+        /**
+         * Schedule [fn] with [args]. False when it could not be — nothing running, wrong arity, or the
+         * runtime's queue is full.
+         *
+         * It SCHEDULES: the body becomes a fiber on the next pass, because handler bodies may act and
+         * may wait. Safe to call from any thread.
+         */
+        fun call(fn: dev.ziggle.vscript.vm.FunctionValue, args: List<Any?>): Boolean
+    }
+
     companion object {
         /**
          * No domain at all: the editor with an empty catalogue.
