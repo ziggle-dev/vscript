@@ -293,6 +293,19 @@ class ScriptRuntime(
     /** Chunks from the last [run], kept so [setLiteral] can retune them mid-flight. */
     private var liveChunks: List<dev.ziggle.vscript.vm.Chunk> = emptyList()
 
+    /**
+     * Calls the host has asked for and the VM has not started yet — see [call].
+     *
+     * Concurrent because [call] is the one entry point on this class a host may use from **any** thread.
+     * Everything else here is client-thread-only by construction; a host event does not get to choose
+     * which thread it arrives on, and making callers marshal first would put the burden in the worst
+     * possible place — every call site, none of which can see the scheduler's rules.
+     */
+    private val pendingCalls = java.util.concurrent.ConcurrentLinkedQueue<PendingCall>()
+
+    /** One queued [call]. */
+    private class PendingCall(val fn: dev.ziggle.vscript.vm.FunctionValue, val args: List<Any?>)
+
     /** The per-frame draw entries, compiled at [run]. See [renderFrame]. */
     private var renderChunks: List<RunEntry> = emptyList()
 
@@ -1125,6 +1138,9 @@ class ScriptRuntime(
         lifecycle.endRun()
         renderChunks = emptyList()
         tickChunks = emptyList()
+        // Work the host queued that will now never run. Dropped rather than carried, so a stop is a stop:
+        // a callback queued a millisecond before the button was pressed must not start after it.
+        pendingCalls.clear()
         drawsDropped = true
         reported.clear()
         // Before killing the fibers, not after: a blocking verb is running on another thread and killing the
@@ -1176,6 +1192,11 @@ class ScriptRuntime(
      * only the logging repeated. Anything that reports inside a per-tick call needs an edge, not a level.
      */
     fun tick() {
+        // BEFORE the idle check below, and that ordering is the whole point: a script whose start handler
+        // has finished has no live fibers, and it is exactly that script — sitting there, listening — that
+        // a host call is for. Draining after the early return would mean callbacks worked only while
+        // something else happened to be running.
+        drainCalls()
         // DRAINING is the one phase that has to advance with nothing running — its whole job is to wait for
         // the actuator after the fibers were killed. Every other phase either has a live fiber or has
         // finished, and returning for them keeps this the cheap no-op it has always been on an idle client.
@@ -1368,6 +1389,89 @@ class ScriptRuntime(
      * (a start fiber parked on a wait counts as settled), so [tick] watches for the moment instead — the
      * same reason [pendingWork] is held behind the wake rather than wired to it.
      */
+    // ---- calling INTO a running script, from Kotlin ------------------------------------------------
+
+    /**
+     * Ask the running script to call [fn] with [args]. Returns false if it cannot be scheduled.
+     *
+     * **This is the host's door into the VM, and it is deliberately the only one.** A host holds a
+     * [dev.ziggle.vscript.vm.FunctionValue] because a script handed it one — through a node that takes a
+     * function parameter — and this is how that value gets used. Anything a host wants to *push* into a
+     * running script (an event arrived, a job finished, a file changed) is this call.
+     *
+     * ### It schedules; it does not invoke
+     *
+     * There is no synchronous version and there should not be. Script code may act and may wait — a
+     * handler is free to walk somewhere — and the VM is a budgeted, fiber-scheduled interpreter that
+     * runs on the client's thread. Calling a script body inline from wherever a host event happened
+     * would run arbitrary waiting code inside somebody else's frame, which is precisely the hazard
+     * `on tick` and `on render` are forbidden from creating. So the call becomes a **fiber**, started on
+     * the next pass, scheduled and budgeted exactly like every other handler.
+     *
+     * That is also why nothing is returned but a yes/no: the result does not exist yet. A host that
+     * needs an answer should give the script a function to call back with, which is the same mechanism
+     * pointed the other way.
+     *
+     * ### Safe from any thread
+     *
+     * The queue is concurrent and drained on the client thread at the top of [tick]. A host may call
+     * this from a network thread, a plugin loop, an event bus — wherever the news actually arrived.
+     *
+     * ### It cannot outlive the run
+     *
+     * Queued calls are dropped when the run ends, so a host holding a stale [FunctionValue] from a
+     * previous run cannot resurrect anything: the value indexes a program that is no longer live, and
+     * [pendingCalls] is cleared alongside the fibers. A host that registers callbacks should still drop
+     * its own registrations on [RunLifecycle.endRun] — but forgetting to is a leak of the host's
+     * memory, never a script that keeps running.
+     *
+     * @return true when the call was queued; false when nothing is running, the function is not part of
+     *   the live program, the arity does not match, or too many calls are already waiting.
+     */
+    fun call(fn: dev.ziggle.vscript.vm.FunctionValue, args: List<Any?> = emptyList()): Boolean {
+        // The run has to still be live. `liveChunks` outlives a stop — [setLiteral] and the panel both
+        // read it afterwards — so it is not on its own evidence that there is anything to call into, and
+        // without this a host holding a value from a finished run would queue work that silently vanished.
+        if (phase != Phase.RUNNING) return false
+        val target = liveChunks.firstOrNull()?.program?.getOrNull(fn.index) ?: return false
+        // Checked HERE rather than at spawn so a wrong-arity call fails at the call site, where the host
+        // can still say something useful about which handler it was. Fiber's own require() would throw on
+        // the client thread, one tick later, with nothing left pointing at the cause.
+        if (args.size + fn.captured.size != target.paramCount) return false
+        if (pendingCalls.size >= MAX_PENDING_CALLS) return false
+        pendingCalls.add(PendingCall(fn, args))
+        return true
+    }
+
+    /** How many queued calls are waiting to become fibers. */
+    val pendingCallCount: Int get() = pendingCalls.size
+
+    /**
+     * Turn queued [call]s into fibers. Client thread, once per [tick], before the scheduler pass.
+     *
+     * A capture is an argument the call site does not know about — the values the lambda closed over —
+     * and the callee expects them in its trailing parameters, exactly as [dev.ziggle.vscript.vm.Op.CALLV]
+     * arranges. Passing `args + captured` is therefore not a convention invented here; it is the same
+     * order the VM's own dynamic call uses.
+     */
+    private fun drainCalls() {
+        if (pendingCalls.isEmpty()) return
+        // Only while there is a program to call into. A queue that survived the run is dropped rather
+        // than run against whatever is loaded now.
+        if (phase != Phase.RUNNING || liveChunks.isEmpty()) {
+            pendingCalls.clear()
+            return
+        }
+        val started = ArrayList<Fiber>()
+        while (true) {
+            val next = pendingCalls.poll() ?: break
+            val target = liveChunks.firstOrNull()?.program?.getOrNull(next.fn.index) ?: continue
+            if (next.args.size + next.fn.captured.size != target.paramCount) continue
+            started += scheduler.spawn("fn ${next.fn.name}", target, next.args + next.fn.captured)
+        }
+        if (started.isNotEmpty()) fibers = fibers + started
+    }
+
     private fun spawnTickLoops() {
         loopsPending = false
         val started = tickLoops.map { entry ->
@@ -1446,6 +1550,9 @@ class ScriptRuntime(
     private fun finishSleep(cleanly: Boolean) {
         renderChunks = emptyList()
         tickChunks = emptyList()
+        // A sleep is a cold stop for everything in flight — waking re-runs from declared defaults — so
+        // queued host calls go the same way the fibers below do.
+        pendingCalls.clear()
         drawsDropped = true
         lifecycle.clearDrawing()
         actuator?.cancel()
@@ -1523,6 +1630,20 @@ class ScriptRuntime(
 
     companion object {
         const val RENDER_BUDGET_NANOS: Long = 2_000_000L
+
+        /**
+         * How many host [call]s may be waiting before further ones are refused.
+         *
+         * A cap rather than an unbounded queue because the host side of this is a firehose nobody
+         * throttles: a chat handler registered in a busy city, a tick handler on a laggy world. Without
+         * a ceiling a script that cannot keep up accumulates work it will never do, and the failure
+         * arrives as heap exhaustion rather than as the thing that actually happened.
+         *
+         * Refusing at the door — [call] returns false — puts the decision where the information is. The
+         * host knows whether a dropped event matters and can log, count or coalesce; the runtime does
+         * not and would have to guess.
+         */
+        const val MAX_PENDING_CALLS: Int = 256
 
         /**
          * What one On Tick pass gets. See [gameTick].

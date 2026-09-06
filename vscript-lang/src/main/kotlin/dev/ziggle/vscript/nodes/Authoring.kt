@@ -149,6 +149,43 @@ object Vs {
         (v as? Collection<*>)?.toList().orEmpty()
     }
 
+    /**
+     * A function the script hands over — `fn(T)` — for a verb that will call it back later.
+     *
+     * This is the parameter half of [dev.ziggle.vscript.runtime.ScriptRuntime.call]: a node declares one
+     * of these, a script passes it a lambda, and the host keeps the value until it has news. It is what
+     * makes "tell me when X happens" sayable without the language knowing what X is.
+     *
+     * **A host may not call the value itself**, and this type deliberately does not help it try. Script
+     * code may act and may wait, so it has to run as a scheduled fiber rather than inside whatever frame
+     * the host happened to be on — see that method for why. What arrives here is an opaque handle to pass
+     * back to the runtime.
+     *
+     * Null when the pin is unwired, which reads naturally as "no handler given" and lets a verb make the
+     * callback optional without a second pin to ask whether it was supplied.
+     *
+     * **State the parameter types.** `function(int)` is `fn(INT)`, and the types are not decoration: a
+     * lambda infers its own parameters from the destination it is written at, so an unconstrained pin
+     * means `on(kind: X) { … }` will not parse and the author is forced to declare a named function
+     * instead. The result is always "nothing" — a handler is called for its effects, and only a function
+     * that hands nothing back is allowed to have them.
+     */
+    fun function(vararg params: VsType<*>): VsType<dev.ziggle.vscript.vm.FunctionValue?> =
+        VsType.of(
+            TypeRef.function(params.map { it.ref }, TypeRef.NOTHING),
+        ) { _, v -> v as? dev.ziggle.vscript.vm.FunctionValue }
+
+    /**
+     * A function of any shape at all — for a verb that genuinely does not care.
+     *
+     * Prefer [function] with its parameter types: an unconstrained function type short-circuits the
+     * arity check, so a mistake reaches the VM as a run-time arity error instead of a compile-time one.
+     * It is also what makes a **lambda** unwritable at the pin — a lambda infers its parameters from
+     * its destination, and this destination says nothing — so a caller may only pass a named function.
+     */
+    val anyFunction: VsType<dev.ziggle.vscript.vm.FunctionValue?> =
+        VsType.of(TypeRef.action()) { _, v -> v as? dev.ziggle.vscript.vm.FunctionValue }
+
     /** A member of a host enum, as the name it is at run time. */
     fun enum(e: HostEnum): VsType<String> = VsType.of(e.type) { _, v -> v?.toString().orEmpty() }
 
