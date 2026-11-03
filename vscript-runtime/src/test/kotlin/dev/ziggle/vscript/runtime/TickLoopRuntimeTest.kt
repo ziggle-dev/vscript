@@ -111,6 +111,29 @@ class TickLoopRuntimeTest {
         assertEquals(3, counts, "no pass runs once the sleep was asked for at a boundary")
     }
 
+    /**
+     * A handover that overruns is FORCED, and a script with no `on sleep` must still reach ASLEEP. [escalate]
+     * empties the fiber list and nothing is spawned after it, so the tick used to return before [workDone] was
+     * read and the run stayed in SLEEPING for ever (Mastering Mixology, 2026-10-20).
+     */
+    @Test
+    fun `a forced handover with no sleep handler still goes to sleep`() {
+        val doc = EditorDoc(graph("stubborn") {
+            val start = node(BuiltinNodes.ENTRY)
+            val delay = node(BuiltinNodes.DELAY, literals = mapOf("Ms" to 1_000_000))
+            link(start, "Exec", delay, "Exec")
+        })
+        val rt = runtime()
+        assertNull(rt.run(doc))
+        rt.tick()
+        assertTrue(rt.requestSleep("test", withinMs = 1_000))
+        clock.now = 2_000                       // past the handover deadline: escalate
+        rt.tick()
+        clock.now = 10_000                      // past the drain window too
+        repeat(4) { rt.tick() }
+        assertTrue(rt.isAsleep, "phase is ${rt.phase}")
+    }
+
     @Test
     fun `gameTick has nothing to drive in loop mode`() {
         val doc = EditorDoc(graph("gt") {

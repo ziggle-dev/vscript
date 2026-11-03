@@ -1203,7 +1203,13 @@ class ScriptRuntime(
         //
         // Getting this wrong in the other direction is worse than a stall: falling through while ASLEEP
         // reaches the ordinary ending below and fires the On Stop handlers of a script that is coming back.
-        if (fibers.isEmpty() && phase != Phase.DRAINING) return
+        //
+        // SLEEPING joins it for the forced path: [escalate] kills every fiber, the drain goes idle, and
+        // [beginSleepHandlers] spawns nothing for a script with no `on sleep` — so the fiber list stays EMPTY.
+        // Returning here then meant [workDone] was never consulted and the run sat in SLEEPING for ever, the
+        // plugin's next run refused behind it (Mastering Mixology overran a handover, 2026-10-20). The
+        // ordinary path only worked because finished fibers are still in the list at that point.
+        if (fibers.isEmpty() && phase != Phase.DRAINING && phase != Phase.SLEEPING) return
         // ---- the tick loops, [TickMode.LOOP]: a sleep ends a loop BETWEEN passes ----------------------
         //
         // Before the scheduler pass, not after it: a loop resting at its boundary when the sleep was asked
